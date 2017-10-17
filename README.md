@@ -1,3 +1,3 @@
 # ASIM Specification
 
-CoreASIM models and spefications for the Interlace project
+CoreASIM models and specifications for the Interlace project
