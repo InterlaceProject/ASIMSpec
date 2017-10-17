@@ -1,0 +1,15 @@
+{
+   "id" : "interlace", 
+   "schedulers" : [
+       {
+	   "file" : "../casim/scheduler.casim",
+	   "start" : true
+       }
+   ], 
+   "asims" : [ 
+       {
+           "file" : "../casim/agent.casim",
+           "start" : true
+       }
+   ]
+}

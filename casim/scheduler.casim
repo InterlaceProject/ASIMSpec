@@ -1,18 +1,21 @@
-CoreASIM agent
+CoreASIM scheduler
 
 use Standard
 
 init Start
+
+controlled counter:INTEGER
 
 scheduling whileRunning
 
 policy whileRunning = skip
 
 rule Start = {
+	counter := 0
 	program(self) := Program
 }
 
 rule Program = {
-	print "Hello World"
-    program(self) := undef
+	print "Scheduling ..." + counter
+	counter := counter + 1
 }
