@@ -2,13 +2,13 @@
    "id" : "interlace", 
    "schedulers" : [
        {
-	   "file" : "../casim/scheduler.casim",
+	   "file" : "casim/scheduler.casim",
 	   "start" : true
        }
    ], 
    "asims" : [ 
        {
-           "file" : "../casim/agent.casim",
+           "file" : "casim/agent.casim",
            "start" : true
        }
    ]
