@@ -8,8 +8,13 @@
    ], 
    "asims" : [ 
        {
+           "file" : "casim/client.casim",
+           "start" : true
+       },
+       {
            "file" : "casim/agent.casim",
            "start" : true
        }
+       
    ]
 }

@@ -1,14 +1,16 @@
-CoreASIM agent
+CoreASIM client
 
 use Standard
 
 init Start
+controlled c: INTEGER
 
 scheduling whileRunning
 
 policy whileRunning = skip
 
 rule Start = {
+	c := 0
 	program(self) := Program
 }
 
@@ -17,11 +19,9 @@ rule CreditReviewReq(req_params) = {
 }
 
 rule Program = {
-	print "checking inbox"	
-
-    choose m in inboxOf(self) with getMessageSubject(m)="CreditReviewRequest" do {
-    	content := getMessageContent(m)
-    	print content
-    	CreditReviewReq(content)
-    }
+	c := c + 1
+	if c <= 10 then par
+		send "from, to, id: " + c  to "agent" with subject "CreditReviewRequest"
+		print "sending" + "from, to, id: " + c  to "agent"
+	endpar
 }
