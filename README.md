@@ -1,6 +1,8 @@
 # ASIM Specification
 
-This project contains the coreASIM models and specifications for the Interlace project
+This project contains the coreASIM models and specifications for the Interlace project. The aim is to provide a software requirements engineering process which might be later extended to a model driven architecture approach.
+
+Currently, the project is in an early state and might not be fully usable yet
 
 ## Important Notes
 
