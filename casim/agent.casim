@@ -17,7 +17,7 @@ rule CreditReviewReq(req_params) = {
 }
 
 rule Program = {
-	print "checking inbox"	
+	print "checking inbox"
 
     choose m in inboxOf(self) with getMessageSubject(m)="CreditReviewRequest" do {
     	content := getMessageContent(m)
