@@ -29,9 +29,9 @@ rule CreditReviewReq(req_params) = {
 
 rule Program = {
 	c := c + 1
-	print "...." + toSet(msg)
-	if c <= 1 then par
+	
+	if c <= 10 then par
+		print ".... sending: " + toSet(msg)
 		send toSet(msg)  to "agent" with subject "CreditReviewRequest"
-		//print toSet(msg)  to "agent"
 	endpar
 }

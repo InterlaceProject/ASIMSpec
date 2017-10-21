@@ -9,16 +9,12 @@ scheduling whileRunning
 policy whileRunning = skip
 
 rule Start = {
-	msgIn := {}
 	program(self) := Program
 }
 
 rule CreditReviewReq(msg) = {
-	//print msg("from")
-	//print msg("to")
-	//print msg("channel")
-	//print msg("amount")
-	print msg
+	print "received"
+	print toMap(msg)
 }
 
 rule Program = {
