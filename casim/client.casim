@@ -32,6 +32,7 @@ rule CreditReviewReq(req_params) = {
 rule Program = {
 	c := c + 1
 	
+	//send then messages
 	if c <= 10 then par
 		print ".... sending: " + msg
 		

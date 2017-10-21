@@ -12,16 +12,38 @@ rule Start = {
 	program(self) := Program
 }
 
+// ------------------------------------------------------------------
+//
+// Credit and Debit request rules
+//
+// ------------------------------------------------------------------
+ 
 rule CreditReviewReq(msg) = {
-	print "received"
-	print msg
+	print "CreditReviewReq received: " + msg
 }
 
+rule CreditPerformReq(msg) = {
+	print "CreditPerformReq received" + msg
+}
+
+rule DebitPreviewReq(msg) = {
+	print "DebitPreviewReq received" + msg
+}
+
+rule DebitPerformReq(msg) = {
+	print "DebitPerformReq received" + msg
+}
+
+
+// ------------------------------------------------------------------
 rule Program = {
 	print "checking inbox"
 
     choose m in inboxOf(self) with getMessageSubject(m)="CreditReviewRequest" do {
+    	// receive messages
     	msgIn := getMessageContent(m)
+    	
+    	// when message received call CreditReviewRequest
     	if msgIn != undef then par
     		CreditReviewReq(msgIn)
 		endpar
