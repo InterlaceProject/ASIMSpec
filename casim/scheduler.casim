@@ -16,6 +16,6 @@ rule Start = {
 }
 
 rule Program = {
-	print "Scheduling ..." + counter
+	//print "Scheduling ..." + counter
 	counter := counter + 1
 }

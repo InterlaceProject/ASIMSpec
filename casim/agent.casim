@@ -9,19 +9,25 @@ scheduling whileRunning
 policy whileRunning = skip
 
 rule Start = {
+	msgIn := {}
 	program(self) := Program
 }
 
-rule CreditReviewReq(req_params) = {
-	print "request params: " + req_params
+rule CreditReviewReq(msg) = {
+	//print msg("from")
+	//print msg("to")
+	//print msg("channel")
+	//print msg("amount")
+	print msg
 }
 
 rule Program = {
 	print "checking inbox"
 
     choose m in inboxOf(self) with getMessageSubject(m)="CreditReviewRequest" do {
-    	content := getMessageContent(m)
-    	print content
-    	CreditReviewReq(content)
+    	msgIn := getMessageContent(m)
+    	if msgIn != undef then par
+    		CreditReviewReq(msgIn)
+		endpar
     }
 }

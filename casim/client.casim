@@ -9,8 +9,17 @@ scheduling whileRunning
 
 policy whileRunning = skip
 
+controlled msg:MAP
+
 rule Start = {
 	c := 0
+	msg := {
+		"from" -> "client",
+		"to" -> "somebody",
+		"channel" -> "a channel",
+		"amount"  -> 100
+	}
+	
 	program(self) := Program
 }
 
@@ -20,8 +29,9 @@ rule CreditReviewReq(req_params) = {
 
 rule Program = {
 	c := c + 1
-	if c <= 10 then par
-		send "from, to, id: " + c  to "agent" with subject "CreditReviewRequest"
-		print "sending" + "from, to, id: " + c  to "agent"
+	print "...." + toSet(msg)
+	if c <= 1 then par
+		send toSet(msg)  to "agent" with subject "CreditReviewRequest"
+		//print toSet(msg)  to "agent"
 	endpar
 }
