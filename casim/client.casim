@@ -13,10 +13,12 @@ controlled msg:MAP
 
 rule Start = {
 	c := 0
+	
+	//prepare transaction message
 	msg := {
 		"from" -> "client",
 		"to" -> "somebody",
-		"channel" -> "a channel",
+		"channel" -> "phone",
 		"amount"  -> 100
 	}
 	
@@ -31,7 +33,9 @@ rule Program = {
 	c := c + 1
 	
 	if c <= 10 then par
-		print ".... sending: " + toSet(msg)
-		send toSet(msg)  to "agent" with subject "CreditReviewRequest"
+		print ".... sending: " + msg
+		
+		//send message to agent
+		send msg  to "agent" with subject "CreditReviewRequest"
 	endpar
 }

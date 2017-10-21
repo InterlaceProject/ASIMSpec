@@ -14,7 +14,7 @@ rule Start = {
 
 rule CreditReviewReq(msg) = {
 	print "received"
-	print toMap(msg)
+	print msg
 }
 
 rule Program = {
