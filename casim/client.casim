@@ -28,7 +28,7 @@ rule Start = {
 rule Program = {
 	c := c + 1
 	
-	//send then messages
+	//sending ten messages
 	if c <= 10 then par
 		print ".... sending: " + msg
 		
