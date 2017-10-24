@@ -25,10 +25,6 @@ rule Start = {
 	program(self) := Program
 }
 
-rule CreditReviewReq(req_params) = {
-	print "request params: " + req_params
-}
-
 rule Program = {
 	c := c + 1
 	
