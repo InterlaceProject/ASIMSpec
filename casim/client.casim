@@ -9,7 +9,7 @@ scheduling whileRunning
 
 policy whileRunning = skip
 
-controlled msg:MAP
+controlled msg: MAP
 
 rule Start = {
 	c := 0

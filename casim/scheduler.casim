@@ -8,7 +8,7 @@ controlled counter:INTEGER
 
 scheduling whileRunning
 
-policy whileRunning = skip
+policy whileRunning = schedule client
 
 rule Start = {
 	counter := 0
@@ -18,4 +18,10 @@ rule Start = {
 rule Program = {
 	//print "Scheduling ..." + counter
 	counter := counter + 1
+	/*
+	forall a in Agents do
+		print a
+	endforall
+	*/
+	
 }
