@@ -86,6 +86,30 @@ rule CreditReviewReq(msg, mbr) = {
 			else Send(YouMayProceedWith(transfer), mbr)
 }
 
+
+/*
+CreditPerformReq((channel; from; to; amount; custFlds); mbr) =
+	if Received(CreditPerformReq(credit; channel; from; to; amount; custFlds); from: mbr) then
+		let transfer = (credit; channel; from; to; amount; custFlds)
+		let ttRes = transferTypeCheck(transfer)
+			if ttRes € TransferType then
+				Send(ErrMsg(NotPermitted(transfer; ttRes)); to: mbr)
+			else let bal = balanceCheck(from; to; amount)
+				if bal = OK
+				then
+					Append(transaction(transfer; ttRes; today); Ledger)
+					Send(Confirmed(transfer); to: mbr)
+				else Send(ErrMsg(transfer; bal ); to: mbr)
+		Consume(CreditPerformReq(channel; from; to; amount; custFlds); from: mbr)
+	where
+		balanceCheck(from; to; amount) € { OK } u Powerset(BalanceViolation)
+		balanceCheck(from; to; amount) = OK iff amountCond(ttRes)(amount) = true and
+			availBalance(from) >= amount and Receivable(amount; to)
+		ViolatesAmountCond(amount) if amountCond(ttRes)(amount) = false
+		ViolatesLowerLimit(from; amount) if availBalance(from) < amount
+		ViolatesUpperLimit(to; amount) if not Receivable(amount; to)
+		Receivable(amt; acc) iff balance(acc) + amt <= upperLimit(acc)
+*/
 rule CreditPerformReq(msg, mbr) = {
 	print mbr + " -> CreditPerformReq received" + msg
 }
