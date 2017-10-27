@@ -23,29 +23,7 @@ rule Start = {
 //
 // ------------------------------------------------------------------
 
-/* ASM - Template	
-Symbols 	€ => element of
-			!€ => not element of
 
-CreditPreviewReq((channel, from, to, amount, custFlds), mbr) =
-	if Received(CreditPreviewReq(credit, channel, from, to, amount, custFlds), from: mbr) then
-		let transfer = (credit, channel, from, to, amount, custFlds)
-		let ttRes = transferTypeCheck(transfer)
-			if ttRes !€ TransferType then
-				Send(ErrMsg(NotPermitted(transfer, ttRes)), to: mbr)
-			else Send(YouMayProceedWith(transfer), to: mbr)
-		Consume(CreditPreviewReq(credit, channel, from, to, amount, custFlds), from: mbr)
-	where
-		transferTypeCheck(transfer ) €
-			{tt}							if tt € TransferType and Match(tt , transfer)
-			PowerSet(TransferTypeError) 	else
-		Match(tt , transfer) if
-			oper(tt) = credit and chan(tt) = channel and
-			owner(from) (elementof) fromMemberGroup(tt) and owner(to) (elementof) toMemberGroup(tt) and
-			sourceType(tt) = accountType(from) and destType(tt) = accountType(to) and
-			custFieldCond(tt, custFlds) = true
-
-*/
 
 derived transferTypeCheck(msg) = {
 	{} //TODO: return Transfer Type
@@ -76,6 +54,30 @@ derived YouMayProceedWith(transfer) = {
 
 universe TransferType //TODO: define base types
 
+
+/* ASM - Template	
+Symbols 	€ => element of
+			!€ => not element of
+
+CreditPreviewReq((channel, from, to, amount, custFlds), mbr) =
+	if Received(CreditPreviewReq(credit, channel, from, to, amount, custFlds), from: mbr) then
+		let transfer = (credit, channel, from, to, amount, custFlds)
+		let ttRes = transferTypeCheck(transfer)
+			if ttRes !€ TransferType then
+				Send(ErrMsg(NotPermitted(transfer, ttRes)), to: mbr)
+			else Send(YouMayProceedWith(transfer), to: mbr)
+		Consume(CreditPreviewReq(credit, channel, from, to, amount, custFlds), from: mbr)
+	where
+		transferTypeCheck(transfer ) €
+			{tt}							if tt € TransferType and Match(tt , transfer)
+			PowerSet(TransferTypeError) 	else
+		Match(tt , transfer) if
+			oper(tt) = credit and chan(tt) = channel and
+			owner(from) (elementof) fromMemberGroup(tt) and owner(to) (elementof) toMemberGroup(tt) and
+			sourceType(tt) = accountType(from) and destType(tt) = accountType(to) and
+			custFieldCond(tt, custFlds) = true
+
+*/
 rule CreditReviewReq(msg, mbr) = {
 	print mbr + " -> CreditReviewReq received: " + msg
 	
