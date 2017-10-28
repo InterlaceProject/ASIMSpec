@@ -14,27 +14,29 @@ universe CHANNELs = {phone, website, pos}
 
 universe TransferTypeError = {error}
 
-//for TransferTypeTable
-universe Origin
-universe Dst
-controlled Channel: CHANNELs
-controlled TransferTypeName: STRING
-controlled Amount_Cond: INTEGER
+controlled Identifier: STRING
+universe CUSTOM_FIELDS
 
-//table where TransferTypes are stored, filled in Start rule
-controlled TransferTypeTable: Channel * Origin * Dst * Amount_Cond -> TransferTypeName 
+controlled name: TransferType -> Identifier
+controlled oper: TransferType -> Operation
+controlled chan: TransferType -> Channel
+controlled sourceType: TransferType -> Formula  //what means Formula ?
+controlled destType: TransferType -> Formula
+controlled fromMemberGroup: TransferType -> Group
+controlled toMemberGroup: TransferType -> Group
+controlled amountCond: TransferType -> Formula
+controlled custFieldCond: TransferType * CUSTOM_FIELDS -> Formula // different in D2.1 specs
+
+controlled owner: STRING -> AGENTS //TODO: assumption might be different
+controlled accountType: STRING -> Formula //TODO: assumption might be different
 
 //all transferetypes by name, filled in Start rule
-universe TransferType
+universe TransferType = {B2BMobile, B2BWebsite, B2BPos}
 
 policy whileRunning = skip
 
 rule Start = {
-	TransferTypeTable(phone, MEMBERs, MEMBERs, 5000) := "B2B-Mobile"
-	TransferTypeTable(website, MEMBERs, MEMBERs, 10000) := "B2B-Website"
-	TransferTypeTable(pos, MEMBERs, MEMBERs, 15000) := "B2B-Pos"
-	
-	TransferType := {"B2B-Mobile", "B2B-Website", "B2B-Pos"}
+	//TODO: fill function parameters with meaningfull test data
 	
 	program(self) := Program
 }
@@ -46,12 +48,12 @@ rule Start = {
 // ------------------------------------------------------------------
 
 // send Response to client
-rule Send(response, mbr) = local response_text, response_subject in {
+rule Send(response, mbr) = local response_text, response_subject in seq
   pop response_subject from response
   pop response_text from response
 
   send response_text to mbr with subject response_subject
-}
+endseq
 
 //prepare error message
 derived ErrorMsg(text) = {
@@ -91,30 +93,36 @@ CreditPreviewReq((channel, from, to, amount, custFlds), mbr) =
 			sourceType(tt) = accountType(from) and destType(tt) = accountType(to) and
 			custFieldCond(tt, custFlds) = true
 */
-rule CreditPreviewReq(msg, mbr) = {
+rule CreditPreviewReq(msg, mbr) = seq
 	print mbr + " -> CreditPreviewReq received: " + msg
 
-	let transfer = msg in
+	let transfer = msg in //removed Received & Cosumed as mailbox logic slightly different implemented
 		let ttRes = transferTypeCheck(transfer) in
-			if ttRes notmemberof TransferType then
+			if ttRes notmemberof TransferType then //swap and invert?
 				Send(ErrorMsg(NotPermitted(transfer, ttRes)), mbr)
 			else Send(YouMayProceedWith(transfer), mbr)
-}
+endseq
 //where
 	//transferTypeCheck
 	derived transferTypeCheck(msg) = {
 		if {tt | tt in TransferType with Match(tt, msg)} != undef then 
 			{tt | tt in TransferType with Match(tt, msg)}
 		else 
-			powerset(TransferTypeError)
+			powerset(TransferTypeError) //why powerset ???
 	}
 	//Match
 	derived Match(tt, transfer) = {
-		//TODO: implement check for transfer has correct tt
-		if tt = TransferType(0) then //dummy return values
-			true
-		else
-			false
+		return match in
+			//choose is not defined in D2.1 rules but needed to have the parameters
+			//FROM, TO, CHANNEL & CUSTFLDS available for the matching part
+			choose c in transfer with "channel" memberof c do let CHANNEL = last(c) in
+				choose f in transfer with "from" memberof f do let FROM = last(f) in
+					choose t in transfer with "to" memberof t do let TO = last(t) in
+					 	choose cf in transfer with "to" memberof cf do let CUSTFLDS = last(cf) in
+						 	match := oper(tt) = credit and chan(tt) = CHANNEL and
+										owner(FROM) memberof fromMemberGroup(tt) and owner(TO) memberof toMemberGroup(tt) and
+										sourceType(tt) = accountType(FROM) and destType(tt) = accountType(TO) and
+										custFieldCond(tt, CUSTFLDS) = true
 	}
 
 
@@ -155,7 +163,7 @@ rule DebitPerformReq(msg, mbr) = {
 
 
 // ------------------------------------------------------------------
-rule Program = {
+rule Program = seq
 	print "checking inbox"
 
     choose m in inboxOf(self) with getMessageSubject(m)="CreditReviewRequest" do {
@@ -168,4 +176,4 @@ rule Program = {
     		CreditPreviewReq(msgIn, mbr)
 		endpar
     }
-}
+endseq
