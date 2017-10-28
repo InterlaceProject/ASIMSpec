@@ -1,4 +1,4 @@
-CoreASIM agent
+CoreASIM server
 
 use LetRulePlugin
 use Standard
@@ -30,10 +30,10 @@ derived transferTypeCheck(msg) = {
 }
 
 // send Response to client
-derived Send(response, mbr) = local response_text, response_subject in {
+rule Send(response, mbr) = local response_text, response_subject in {
   pop response_subject from response
   pop response_text from response
-  
+
   send response_text to mbr with subject response_subject
 }
 
@@ -55,7 +55,7 @@ derived YouMayProceedWith(transfer) = {
 universe TransferType //TODO: define base types
 
 
-/* ASM - Template	
+/* ASM - Template
 Symbols 	€ => element of
 			!€ => not element of
 
@@ -78,12 +78,12 @@ CreditPreviewReq((channel, from, to, amount, custFlds), mbr) =
 			custFieldCond(tt, custFlds) = true
 
 */
-rule CreditReviewReq(msg, mbr) = {
-	print mbr + " -> CreditReviewReq received: " + msg
-	
+rule CreditPreviewReq(msg, mbr) = {
+	//print mbr + " -> CreditPreviewReq received: " + msg
+
 	let transfer = msg in
 		let ttRes = transferTypeCheck(transfer) in
-			if ttRes memberof TransferType then
+			if ttRes notmemberof TransferType then
 				Send(ErrorMsg(NotPermitted(transfer, ttRes)), mbr)
 			else Send(YouMayProceedWith(transfer), mbr)
 }
@@ -94,7 +94,7 @@ CreditPerformReq((channel; from; to; amount; custFlds); mbr) =
 	if Received(CreditPerformReq(credit; channel; from; to; amount; custFlds); from: mbr) then
 		let transfer = (credit; channel; from; to; amount; custFlds)
 		let ttRes = transferTypeCheck(transfer)
-			if ttRes € TransferType then
+			if ttRes ï¿½ TransferType then
 				Send(ErrMsg(NotPermitted(transfer; ttRes)); to: mbr)
 			else let bal = balanceCheck(from; to; amount)
 				if bal = OK
@@ -104,7 +104,7 @@ CreditPerformReq((channel; from; to; amount; custFlds); mbr) =
 				else Send(ErrMsg(transfer; bal ); to: mbr)
 		Consume(CreditPerformReq(channel; from; to; amount; custFlds); from: mbr)
 	where
-		balanceCheck(from; to; amount) € { OK } u Powerset(BalanceViolation)
+		balanceCheck(from; to; amount) ï¿½ { OK } u Powerset(BalanceViolation)
 		balanceCheck(from; to; amount) = OK iff amountCond(ttRes)(amount) = true and
 			availBalance(from) >= amount and Receivable(amount; to)
 		ViolatesAmountCond(amount) if amountCond(ttRes)(amount) = false
@@ -132,11 +132,11 @@ rule Program = {
     choose m in inboxOf(self) with getMessageSubject(m)="CreditReviewRequest" do {
     	// receive messages
     	msgIn := getMessageContent(m)
-    	
+
     	// when message received call CreditReviewRequest
     	if msgIn != undef then par
     		mbr := getMessageSender(m)
-    		CreditReviewReq(msgIn, mbr)
+    		CreditPreviewReq(msgIn, mbr)
 		endpar
     }
 }
