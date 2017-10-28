@@ -16,6 +16,9 @@ universe TransferTypeError = {error}
 
 controlled Identifier: STRING
 universe CUSTOM_FIELDS
+universe Group
+
+controlled Formula: ACCOUNT_TYPES //TODO: assumption
 
 controlled name: TransferType -> Identifier
 controlled oper: TransferType -> Operation
