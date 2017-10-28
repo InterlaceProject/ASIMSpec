@@ -19,7 +19,8 @@ rule Start = {
 		"from" -> "client",
 		"to" -> "somebody",
 		"channel" -> "phone",
-		"amount"  -> 100
+		"amount"  -> 100,
+		"custFlds" -> ""
 	}
 	
 	program(self) := Program
