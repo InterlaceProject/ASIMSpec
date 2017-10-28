@@ -1,6 +1,5 @@
 CoreASIM server
 
-use LetRulePlugin
 use Standard
 
 init Start
@@ -45,23 +44,6 @@ rule Start = {
 // Credit and Debit request rules
 //
 // ------------------------------------------------------------------
-
-//"where" Match
-derived Match(tt, transfer) = {
-	//TODO: always give back first
-	if tt = TransferType(0) then
-		true
-	else
-		false
-}
-
-//"where" transferTypeCheck
-derived transferTypeCheck(msg) = {
-	if {tt | tt in TransferType with Match(tt, msg)} != undef then 
-		{tt | tt in TransferType with Match(tt, msg)}
-	else 
-		powerset(TransferTypeError)
-}
 
 // send Response to client
 rule Send(response, mbr) = local response_text, response_subject in {
@@ -118,6 +100,23 @@ rule CreditPreviewReq(msg, mbr) = {
 				Send(ErrorMsg(NotPermitted(transfer, ttRes)), mbr)
 			else Send(YouMayProceedWith(transfer), mbr)
 }
+//where
+	//transferTypeCheck
+	derived transferTypeCheck(msg) = {
+		if {tt | tt in TransferType with Match(tt, msg)} != undef then 
+			{tt | tt in TransferType with Match(tt, msg)}
+		else 
+			powerset(TransferTypeError)
+	}
+	//Match
+	derived Match(tt, transfer) = {
+		//TODO: implement check for transfer has correct tt
+		if tt = TransferType(0) then //dummy return values
+			true
+		else
+			false
+	}
+
 
 /*
 CreditPerformReq((channel; from; to; amount; custFlds); mbr) =
