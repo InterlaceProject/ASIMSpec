@@ -82,7 +82,7 @@ CreditPreviewReq((channel, from, to, amount, custFlds), mbr) =
 	if Received(CreditPreviewReq(credit, channel, from, to, amount, custFlds), from: mbr) then
 		let transfer = (credit, channel, from, to, amount, custFlds)
 		let ttRes = transferTypeCheck(transfer)
-			if ttRes !� TransferType then
+			if ttResult !� TransferType then
 				Send(ErrMsg(NotPermitted(transfer, ttRes)), to: mbr)
 			else Send(YouMayProceedWith(transfer), to: mbr)
 		Consume(CreditPreviewReq(credit, channel, from, to, amount, custFlds), from: mbr)
