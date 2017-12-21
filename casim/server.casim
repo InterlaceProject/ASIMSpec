@@ -18,12 +18,12 @@ controlled Identifier: STRING
 universe CUSTOM_FIELDS
 universe Group
 
-controlled Formula: ACCOUNT_TYPES //TODO: assumption
+//controlled Formula: ACCOUNT_TYPES //TODO: assumption
 
 controlled name: TransferType -> Identifier
 controlled oper: TransferType -> Operation
 controlled chan: TransferType -> Channel
-controlled sourceType: TransferType -> Formula  //what does Formula mean?
+controlled sourceType: TransferType -> Formula  //Formula is a function reference (name) to a Boolean function?
 controlled destType: TransferType -> Formula
 controlled fromMemberGroup: TransferType -> Group
 controlled toMemberGroup: TransferType -> Group
@@ -96,7 +96,8 @@ CreditPreviewReq((channel, from, to, amount, custFlds), mbr) =
 			sourceType(tt) = accountType(from) and destType(tt) = accountType(to) and
 			custFieldCond(tt, custFlds) = true
 */
-rule CreditPreviewReq(msg, mbr) = seq
+rule CreditPreviewReq(msg, mbr) =
+seq
 	print mbr + " -> CreditPreviewReq received: " + msg
 
 	let transfer = msg in //removed Received & Cosumed as mailbox logic slightly different implemented
@@ -107,14 +108,16 @@ rule CreditPreviewReq(msg, mbr) = seq
 endseq
 //where
 	//transferTypeCheck
-	derived transferTypeCheck(msg) = {
+	derived transferTypeCheck(msg) =
+	{
 		if {tt | tt in TransferType with Match(tt, msg)} != undef then 
 			{tt | tt in TransferType with Match(tt, msg)}
 		else 
 			powerset(TransferTypeError) //why powerset ???
 	}
 	//Match
-	derived Match(tt, transfer) = {
+	derived Match(tt, transfer) =
+	{
 		return match in
 			//choose is not defined in D2.1 rules but needed to have the parameters
 			//FROM, TO, CHANNEL & CUSTFLDS available for the matching part
@@ -172,6 +175,8 @@ rule Program = seq
     choose m in inboxOf(self) with getMessageSubject(m)="CreditReviewRequest" do {
     	// receive messages
     	msgIn := getMessageContent(m)
+
+	print msgIn
 
     	// when message received call CreditReviewRequest
     	if msgIn != undef then par
