@@ -23,7 +23,7 @@ controlled Formula: ACCOUNT_TYPES //TODO: assumption
 controlled name: TransferType -> Identifier
 controlled oper: TransferType -> Operation
 controlled chan: TransferType -> Channel
-controlled sourceType: TransferType -> Formula  //what means Formula ?
+controlled sourceType: TransferType -> Formula  //what does Formula mean?
 controlled destType: TransferType -> Formula
 controlled fromMemberGroup: TransferType -> Group
 controlled toMemberGroup: TransferType -> Group
@@ -75,20 +75,20 @@ derived YouMayProceedWith(transfer) = {
 
 
 /* ASM - Template
-Symbols 	€ => element of
-			!€ => not element of
+Symbols 	ï¿½ => element of
+			!ï¿½ => not element of
 
 CreditPreviewReq((channel, from, to, amount, custFlds), mbr) =
 	if Received(CreditPreviewReq(credit, channel, from, to, amount, custFlds), from: mbr) then
 		let transfer = (credit, channel, from, to, amount, custFlds)
 		let ttRes = transferTypeCheck(transfer)
-			if ttRes !€ TransferType then
+			if ttRes !ï¿½ TransferType then
 				Send(ErrMsg(NotPermitted(transfer, ttRes)), to: mbr)
 			else Send(YouMayProceedWith(transfer), to: mbr)
 		Consume(CreditPreviewReq(credit, channel, from, to, amount, custFlds), from: mbr)
 	where
-		transferTypeCheck(transfer ) €
-			{tt}							if tt € TransferType and Match(tt , transfer)
+		transferTypeCheck(transfer ) ï¿½
+			{tt}							if tt ï¿½ TransferType and Match(tt , transfer)
 			PowerSet(TransferTypeError) 	else
 		Match(tt , transfer) if
 			oper(tt) = credit and chan(tt) = channel and
