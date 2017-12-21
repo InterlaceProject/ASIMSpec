@@ -75,20 +75,20 @@ derived YouMayProceedWith(transfer) = {
 
 
 /* ASM - Template
-Symbols 	� => element of
-			!� => not element of
+Symbols 	\in => element of
+			!\in => not element of
 
 CreditPreviewReq((channel, from, to, amount, custFlds), mbr) =
 	if Received(CreditPreviewReq(credit, channel, from, to, amount, custFlds), from: mbr) then
 		let transfer = (credit, channel, from, to, amount, custFlds)
 		let ttRes = transferTypeCheck(transfer)
-			if ttResult !� TransferType then
+			if ttResult !\in TransferType then
 				Send(ErrMsg(NotPermitted(transfer, ttRes)), to: mbr)
 			else Send(YouMayProceedWith(transfer), to: mbr)
 		Consume(CreditPreviewReq(credit, channel, from, to, amount, custFlds), from: mbr)
 	where
-		transferTypeCheck(transfer ) �
-			{tt}							if tt � TransferType and Match(tt , transfer)
+		transferTypeCheck(transfer ) \in
+			{tt}							if tt \in TransferType and Match(tt , transfer)
 			PowerSet(TransferTypeError) 	else
 		Match(tt , transfer) if
 			oper(tt) = credit and chan(tt) = channel and
@@ -134,7 +134,7 @@ CreditPerformReq((channel; from; to; amount; custFlds); mbr) =
 	if Received(CreditPerformReq(credit; channel; from; to; amount; custFlds); from: mbr) then
 		let transfer = (credit; channel; from; to; amount; custFlds)
 		let ttRes = transferTypeCheck(transfer)
-			if ttRes � TransferType then
+			if ttRes \in TransferType then
 				Send(ErrMsg(NotPermitted(transfer; ttRes)); to: mbr)
 			else let bal = balanceCheck(from; to; amount)
 				if bal = OK
@@ -144,7 +144,7 @@ CreditPerformReq((channel; from; to; amount; custFlds); mbr) =
 				else Send(ErrMsg(transfer; bal ); to: mbr)
 		Consume(CreditPerformReq(channel; from; to; amount; custFlds); from: mbr)
 	where
-		balanceCheck(from; to; amount) � { OK } u Powerset(BalanceViolation)
+		balanceCheck(from; to; amount) \in { OK } u Powerset(BalanceViolation)
 		balanceCheck(from; to; amount) = OK iff amountCond(ttRes)(amount) = true and
 			availBalance(from) >= amount and Receivable(amount; to)
 		ViolatesAmountCond(amount) if amountCond(ttRes)(amount) = false
