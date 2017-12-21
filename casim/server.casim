@@ -64,8 +64,8 @@ derived ErrorMsg(text) = {
 }
 
 // not permitted message
-derived NotPermitted(transfer, ttRes) = {
-	"Error occured; action not permitted: " + transfer + "; " + ttRes
+derived NotPermitted(transfer, ttResult) = {
+	"Error occured; action not permitted: " + transfer + "; " + ttResult
 }
 
 //prepare normal message
@@ -100,9 +100,9 @@ rule CreditPreviewReq(msg, mbr) = seq
 	print mbr + " -> CreditPreviewReq received: " + msg
 
 	let transfer = msg in //removed Received & Cosumed as mailbox logic slightly different implemented
-		let ttRes = transferTypeCheck(transfer) in
-			if ttRes notmemberof TransferType then //swap and invert?
-				Send(ErrorMsg(NotPermitted(transfer, ttRes)), mbr)
+		let ttResult = transferTypeCheck(transfer) in
+			if ttResult notmemberof TransferType then //swap and invert?
+				Send(ErrorMsg(NotPermitted(transfer, ttResult)), mbr)
 			else Send(YouMayProceedWith(transfer), mbr)
 endseq
 //where
