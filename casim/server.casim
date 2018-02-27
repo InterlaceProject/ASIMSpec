@@ -6,6 +6,8 @@ init Start
 
 scheduling whileRunning
 
+controlled c2: INTEGER
+
 //Predefined lists
 universe ACCOUNT_TYPES = {fcredit, domu, feeg}
 universe OPERATIONS = {credit, debit}
@@ -40,7 +42,7 @@ policy whileRunning = skip
 
 rule Start = {
 	//TODO: fill function parameters with meaningfull test data
-	
+	c2:=0
 	program(self) := Program
 }
 
@@ -170,7 +172,9 @@ rule DebitPerformReq(msg, mbr) = {
 
 // ------------------------------------------------------------------
 rule Program = seq
-	print "checking inbox......"
+	c2 := c2 + 1
+	print "checking inbox: " + c2
+	
     choose m in inboxOf(self) with getMessageSubject(m)="CreditReviewRequest" do {
 	   	// receive messages
     	msgIn := getMessageContent(m)

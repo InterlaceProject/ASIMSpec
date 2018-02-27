@@ -28,7 +28,7 @@ rule Start = {
 
 rule Program = {
 	c := c + 1
-	
+	print "Tick Client: " + c	
 	//sending ten messages
 	if c>=10 and c <= 20 then par
 		//print ".... sending: " + msg
