@@ -170,18 +170,17 @@ rule DebitPerformReq(msg, mbr) = {
 
 // ------------------------------------------------------------------
 rule Program = seq
-	print "checking inbox"
-
+	print "checking inbox......"
     choose m in inboxOf(self) with getMessageSubject(m)="CreditReviewRequest" do {
-    	// receive messages
+	   	// receive messages
     	msgIn := getMessageContent(m)
-
-	print msgIn
-
+    	
     	// when message received call CreditReviewRequest
-    	if msgIn != undef then par
+    	if msgIn != undef then par	
     		mbr := getMessageSender(m)
-    		CreditPreviewReq(msgIn, mbr)
+    		print "Got Message: Sender -> " + mbr + "Message -> " + msgIn
+    		
+    		//CreditPreviewReq(msgIn, mbr)
 		endpar
     }
 endseq

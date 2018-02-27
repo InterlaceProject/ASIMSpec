@@ -15,13 +15,13 @@ rule Start = {
 	c := 0
 	
 	//prepare transaction message
-	msg := {
-		"from" -> "client",
-		"to" -> "somebody",
-		"channel" -> "phone",
-		"amount"  -> 100,
-		"custFlds" -> ""
-	}
+	//msg := {
+	//	"from" -> "client",
+	//	"to" -> "somebody",
+	//	"channel" -> "phone",
+	//	"amount"  -> 100,
+	//	"custFlds" -> ""
+	//}
 	
 	program(self) := Program
 }
@@ -30,10 +30,17 @@ rule Program = {
 	c := c + 1
 	
 	//sending ten messages
-	if c <= 10 then par
-		print ".... sending: " + msg
+	if c>=10 and c <= 20 then par
+		//print ".... sending: " + msg
 		
-		//send message to agent
-		send msg  to "agent" with subject "CreditReviewRequest"
+		//send message to server
+		send {
+			"from" -> "client",
+			"to" -> "somebody",
+			"channel" -> "phone",
+			"amount"  -> 100,
+			"custFlds" -> c
+		}  to "server" with subject "CreditReviewRequest"
+		print "send message nr " + c
 	endpar
 }

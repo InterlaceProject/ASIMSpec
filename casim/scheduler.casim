@@ -8,8 +8,10 @@ controlled counter:INTEGER
 
 scheduling whileRunning
 
-//policy whileRunning = schedule client
-policy whileRunning = skip
+policy whileRunning = {
+	schedule client
+	schedule server
+}
 
 rule Start = {
 	counter := 0
