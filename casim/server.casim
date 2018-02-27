@@ -176,7 +176,7 @@ rule Program = seq
     	msgIn := getMessageContent(m)
     	
     	// when message received call CreditReviewRequest
-    	if msgIn != undef then par	
+    	if msgIn != undef then par
     		mbr := getMessageSender(m)
     		print "Got Message: Sender -> " + mbr + "Message -> " + msgIn
     		

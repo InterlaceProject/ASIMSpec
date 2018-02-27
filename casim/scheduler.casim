@@ -14,17 +14,9 @@ policy whileRunning = {
 }
 
 rule Start = {
-	counter := 0
 	program(self) := Program
 }
 
 rule Program = {
-	//print "Scheduling ..." + counter
-	counter := counter + 1
-	/*
-	forall a in Agents do
-		print a
-	endforall
-	*/
-	
+	skip
 }
