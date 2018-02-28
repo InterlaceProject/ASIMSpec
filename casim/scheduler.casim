@@ -11,12 +11,15 @@ scheduling whileRunning
 policy whileRunning = {
 	schedule client
 	schedule server
+	//schedule self
 }
 
 rule Start = {
+	counter := 0
 	program(self) := Program
 }
 
 rule Program = {
-	skip
+	counter := counter + 1
+	print "scheduler " + counter
 }

@@ -27,7 +27,6 @@ rule Start = {
 }
 
 rule Program = {
-	c := c + 1
 	print "Tick Client: " + c	
 	//sending ten messages
 	if c>=10 and c <= 20 then par
@@ -43,4 +42,5 @@ rule Program = {
 		}  to "server" with subject "CreditReviewRequest"
 		print "send message nr " + c
 	endpar
+	c := c + 1
 }
