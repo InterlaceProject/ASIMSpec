@@ -12,6 +12,7 @@ policy whileRunning = skip
 controlled msg: MAP
 
 rule Start = {
+	print "------------------client init"
 	c := 0
 	
 	//prepare transaction message
@@ -27,9 +28,10 @@ rule Start = {
 }
 
 rule Program = {
-	print "Tick Client: " + c	
+	print "------------------tick: " + c	
+	
 	//sending ten messages
-	if c>=10 and c <= 20 then par
+	if c>=10 and c<=20 then par
 		//print ".... sending: " + msg
 		
 		//send message to server
@@ -40,7 +42,7 @@ rule Program = {
 			"amount"  -> 100,
 			"custFlds" -> c
 		}  to "server" with subject "CreditReviewRequest"
-		print "send message nr " + c
+		print "sent message nr " + c
 	endpar
 	c := c + 1
 }

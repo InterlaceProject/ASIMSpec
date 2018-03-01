@@ -41,7 +41,7 @@ universe TransferType = {B2BMobile, B2BWebsite, B2BPos}
 policy whileRunning = skip
 
 rule Start = {
-	//TODO: fill function parameters with meaningfull test data
+	print "------------------server init"
 	c2 := 0
 	program(self) := Program
 }
@@ -172,7 +172,8 @@ rule DebitPerformReq(msg, mbr) = {
 
 // ------------------------------------------------------------------
 rule Program = seq
-	print "checking inbox: " + c2
+	print "------------------tick: " + c2
+	print "checking inbox"
 	
     choose m in inboxOf(self) with getMessageSubject(m)="CreditReviewRequest" do {
 	   	// receive messages

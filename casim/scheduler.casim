@@ -15,11 +15,12 @@ policy whileRunning = {
 }
 
 rule Start = {
+	print "------------------scheduler init"
 	counter := 0
 	program(self) := Program
 }
 
 rule Program = {
+	print "------------------tick: " + counter
 	counter := counter + 1
-	print "scheduler " + counter
 }
