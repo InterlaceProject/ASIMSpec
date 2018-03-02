@@ -1,0 +1,7 @@
+*.sh text eol=lf
+asimrc text eol=lf
+.gitattributes text eol=lf
+Dockerfile text eol=lf
+*.md text eol=lf
+*.casim text eol=lf
+*.icef text eol=lf
