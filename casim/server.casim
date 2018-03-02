@@ -112,9 +112,9 @@ endseq
 	//transferTypeCheck
 	derived transferTypeCheck(msg) =
 	{
-		if {tt | tt in TransferType with Match(tt, msg)} != undef then 
+		if {tt | tt in TransferType with Match(tt, msg)} != undef then
 			{tt | tt in TransferType with Match(tt, msg)}
-		else 
+		else
 			powerset(TransferTypeError) //why powerset ???
 	}
 	//Match
@@ -174,18 +174,18 @@ rule DebitPerformReq(msg, mbr) = {
 rule Program = seq
 	print "------------------tick: " + c2
 	print "checking inbox"
-	
-    choose m in inboxOf(self) with getMessageSubject(m)="CreditReviewRequest" do {
+
+  choose m in inboxOf(self) with getMessageSubject(m)="CreditReviewRequest" do {
 	   	// receive messages
     	msgIn := getMessageContent(m)
-    	
+
     	// when message received call CreditReviewRequest
-    	if msgIn != undef then par
+    	if msgIn != undef then seq
     		mbr := getMessageSender(m)
     		print "Got Message: Sender -> " + mbr + "Message -> " + msgIn
-    		
+
     		//CreditPreviewReq(msgIn, mbr)
-		endpar
+		endseq
     }
     c2 := c2 + 1
 endseq
