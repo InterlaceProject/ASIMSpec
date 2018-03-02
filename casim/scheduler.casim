@@ -20,7 +20,7 @@ rule Start = {
 	program(self) := Program
 }
 
-rule Program = {
+rule Program = seq
 	print "------------------tick: " + counter
 	counter := counter + 1
-}
+endseq

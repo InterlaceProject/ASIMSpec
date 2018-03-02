@@ -175,7 +175,7 @@ rule Program = seq
 	print "------------------tick: " + c2
 	print "checking inbox"
 
-  choose m in inboxOf(self) with getMessageSubject(m)="CreditReviewRequest" do {
+  	choose m in inboxOf(self) with getMessageSubject(m)="CreditReviewRequest" do seq
 	   	// receive messages
     	msgIn := getMessageContent(m)
 
@@ -186,6 +186,6 @@ rule Program = seq
 
     		//CreditPreviewReq(msgIn, mbr)
 		endseq
-    }
+    endseq
     c2 := c2 + 1
 endseq

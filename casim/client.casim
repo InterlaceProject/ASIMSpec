@@ -27,11 +27,11 @@ rule Start = {
 	program(self) := Program
 }
 
-rule Program = {
+rule Program = seq
 	print "------------------tick: " + c	
 	
 	//sending ten messages
-	if c>=10 and c<=20 then par
+	if c>=10 and c<=20 then seq
 		//print ".... sending: " + msg
 		
 		//send message to server
@@ -43,6 +43,6 @@ rule Program = {
 			"custFlds" -> c
 		}  to "server" with subject "CreditReviewRequest"
 		print "sent message nr " + c
-	endpar
+	endseq
 	c := c + 1
-}
+endseq
