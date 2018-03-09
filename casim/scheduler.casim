@@ -54,6 +54,7 @@ rule ProgramClient = par
 		//"destroyASIM self" not working
 		//destroyASIM <name> would work but I don't know how to determine the name of the current ASIM
 		//=> send done message to scheduler which ends the asim by retrieving the sender name
+		//also strangely it is not working sending the Done right after sending the credit review request
 		send "Done" to "scheduler" with subject "Done"
 		done := true
 	endpar
