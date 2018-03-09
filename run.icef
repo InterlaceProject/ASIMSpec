@@ -6,11 +6,7 @@
 	   "start" : true
        }
    ], 
-   "asims" : [ 
-       {
-           "file" : "casim/client.casim",
-           "start" : true
-       },
+   "asims" : [       
        {
            "file" : "casim/server.casim",
            "start" : true

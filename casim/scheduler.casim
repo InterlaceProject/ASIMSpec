@@ -6,10 +6,12 @@ init Start
 
 controlled counter:INTEGER
 
+
+
 scheduling whileRunning
 
 policy whileRunning = {
-	schedule client
+	//schedule clientTest
 	schedule server
 	//schedule self
 }
@@ -22,5 +24,38 @@ rule Start = {
 
 rule Program = seq
 	print "------------------tick: " + counter
+	
+	//create new client
+	if counter % 10 = 0 then seq
+		createASIM initializedBy InitClient withProgram ProgramClient andPolicy ClientSkip in temploc
+	endseq
+	
+	choose m in inboxOf(self) with getMessageSubject(m)="Done" do seq
+		destroyASIM getMessageSender(m)
+	endseq
+	
 	counter := counter + 1
 endseq
+
+policy ClientSkip = skip
+
+rule InitClient = par
+	print "------------------clienttest init"
+	sent := false
+endpar
+
+rule ProgramClient = par
+	print "------------------clientTest tick sent: " + sent
+	
+	if sent = false then par
+		send {
+				"from" -> "client",
+				"to" -> "somebody",
+				"channel" -> "phone",
+				"amount"  -> 100,
+				"custFlds" -> "Sent from Dynamic Client"
+			}  to "server" with subject "CreditReviewRequest"
+		
+		send "Done" to scheduler with subject "Done"
+	endpar
+endpar

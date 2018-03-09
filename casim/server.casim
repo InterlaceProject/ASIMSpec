@@ -184,7 +184,9 @@ rule Program = seq
     		mbr := getMessageSender(m)
     		print "Got Message: Sender -> " + mbr + "Message -> " + msgIn
 
-    		//CreditPreviewReq(msgIn, mbr)
+    		//CreditPreviewReq(msgIn, mbr)#
+    		
+    		destroyASIM mbr    		
 		endseq
     endseq
     c2 := c2 + 1
