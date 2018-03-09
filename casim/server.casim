@@ -175,17 +175,17 @@ rule Program = seq
 	//print "------------------tick: " + c2
 	//print "checking inbox"
 
-  	choose m in inboxOf(self) with getMessageSubject(m)="CreditReviewRequest" do seq
+  	choose m in inboxOf(self) with getMessageSubject(m)="CreditReviewRequest" do seqblock
 	   	// receive messages
     	msgIn := getMessageContent(m)
 
     	// when message received call CreditReviewRequest
-    	if msgIn != undef then seq
+    	if msgIn != undef then seqblock
     		mbr := getMessageSender(m)
     		print "Got Message: Sender -> " + mbr + "Message -> " + msgIn
 
     		//CreditPreviewReq(msgIn, mbr)    		
-		endseq
-    endseq
+		endseqblock
+    endseqblock
     c2 := c2 + 1
 endseq

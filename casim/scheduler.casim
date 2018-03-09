@@ -41,6 +41,9 @@ rule Program = seq
 	counter := counter + 1
 endseq
 
+//-----------------------------------------------------------------------------------------------------------
+//				begin client code
+//-----------------------------------------------------------------------------------------------------------
 policy ClientSkip = skip
 
 rule InitClient = par
@@ -54,7 +57,7 @@ rule ProgramClient = par
 		//"destroyASIM self" not working
 		//destroyASIM <name> would work but I don't know how to determine the name of the current ASIM
 		//=> send done message to scheduler which ends the asim by retrieving the sender name
-		//also strangely it is not working sending the Done right after sending the credit review request
+		//also, strangely it is not working sending the "Done" right after sending the credit review request in bottom if statement
 		send "Done" to "scheduler" with subject "Done"
 		done := true
 	endpar
@@ -63,7 +66,7 @@ rule ProgramClient = par
 				"from" -> "client",
 				"to" -> "somebody",
 				"channel" -> "phone",
-				"amount"  -> 100,
+				"amount"  -> 2000,
 				"custFlds" -> "Sent from Dynamic Client"
 			}  to "server" with subject "CreditReviewRequest"
 		sent := true
