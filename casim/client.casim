@@ -1,3 +1,7 @@
+//currently not used in run.icef
+//because the client should be created dynamicly
+//and with abitrary count not just one fixed client
+// ==> creation and destruction is happening inside the schdeduler
 CoreASIM client
 
 use Standard
@@ -14,15 +18,6 @@ controlled msg: MAP
 rule Start = {
 	print "------------------client init"
 	c := 0
-	
-	//prepare transaction message
-	//msg := {
-	//	"from" -> "client",
-	//	"to" -> "somebody",
-	//	"channel" -> "phone",
-	//	"amount"  -> 100,
-	//	"custFlds" -> ""
-	//}
 	
 	program(self) := Program
 }

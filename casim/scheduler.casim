@@ -23,7 +23,7 @@ rule Start = {
 }
 
 rule Program = seq
-	print "------------------tick: " + counter
+	//print "------------------tick: " + counter
 	
 	//create new client
 	if counter % 10 = 0 then seq
@@ -31,7 +31,11 @@ rule Program = seq
 	endseq
 	
 	choose m in inboxOf(self) with getMessageSubject(m)="Done" do seq
-		destroyASIM getMessageSender(m)
+		print "--------------------------------------------------------------------------"
+		clientName := getMessageSender(m)
+		destroyASIM clientName
+		print "client removed: " + clientName
+		print "--------------------------------------------------------------------------"
 	endseq
 	
 	counter := counter + 1
@@ -40,13 +44,19 @@ endseq
 policy ClientSkip = skip
 
 rule InitClient = par
-	print "------------------clienttest init"
+	print "------------------client init"
 	sent := false
+	done := false
 endpar
 
 rule ProgramClient = par
-	print "------------------clientTest tick sent: " + sent
-	
+	if sent = true and done = false then par
+		//"destroyASIM self" not working
+		//destroyASIM <name> would work but I don't know how to determine the name of the current ASIM
+		//=> send done message to scheduler which ends the asim by retrieving the sender name
+		send "Done" to "scheduler" with subject "Done"
+		done := true
+	endpar
 	if sent = false then par
 		send {
 				"from" -> "client",
@@ -55,7 +65,6 @@ rule ProgramClient = par
 				"amount"  -> 100,
 				"custFlds" -> "Sent from Dynamic Client"
 			}  to "server" with subject "CreditReviewRequest"
-		
-		send "Done" to scheduler with subject "Done"
+		sent := true
 	endpar
 endpar

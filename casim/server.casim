@@ -172,8 +172,8 @@ rule DebitPerformReq(msg, mbr) = {
 
 // ------------------------------------------------------------------
 rule Program = seq
-	print "------------------tick: " + c2
-	print "checking inbox"
+	//print "------------------tick: " + c2
+	//print "checking inbox"
 
   	choose m in inboxOf(self) with getMessageSubject(m)="CreditReviewRequest" do seq
 	   	// receive messages
@@ -184,9 +184,7 @@ rule Program = seq
     		mbr := getMessageSender(m)
     		print "Got Message: Sender -> " + mbr + "Message -> " + msgIn
 
-    		//CreditPreviewReq(msgIn, mbr)#
-    		
-    		destroyASIM mbr    		
+    		//CreditPreviewReq(msgIn, mbr)    		
 		endseq
     endseq
     c2 := c2 + 1
