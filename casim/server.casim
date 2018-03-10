@@ -14,11 +14,10 @@ universe METADATA = { null } //TODO
 
 policy whileRunning = skip
 
-rule Start = seqblock
-	print "ASIM server init ..."
+rule Start = {
+	print "ASIM MUTUAL CREDIT server init"	
 	program(self) := Program
-endseqblock
-
+}
 //-----------------------------------------------------------------------------------------------------------
 //				begin globally used rules
 //-----------------------------------------------------------------------------------------------------------
