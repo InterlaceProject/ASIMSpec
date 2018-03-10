@@ -6,52 +6,24 @@ init Start
 
 scheduling whileRunning
 
-controlled c2: INTEGER
-
-//Predefined lists
-universe ACCOUNT_TYPES = {fcredit, domu, feeg}
-universe OPERATIONS = {credit, debit}
-universe MEMBERs = {client, server, somebody}
-universe CHANNELs = {phone, website, pos}
-
-universe TransferTypeError = {error}
-
-controlled Identifier: STRING
-universe CUSTOM_FIELDS
-universe Group
-
-//controlled Formula: ACCOUNT_TYPES //TODO: assumption
-
-controlled name: TransferType -> Identifier
-controlled oper: TransferType -> Operation
-controlled chan: TransferType -> Channel
-controlled sourceType: TransferType -> Formula  //Formula is a function reference (name) to a Boolean function?
-controlled destType: TransferType -> Formula
-controlled fromMemberGroup: TransferType -> Group
-controlled toMemberGroup: TransferType -> Group
-controlled amountCond: TransferType -> Formula
-controlled custFieldCond: TransferType * CUSTOM_FIELDS -> Formula // different in D2.1 specs
-
-controlled owner: STRING -> AGENTS //TODO: assumption might be different
-controlled accountType: STRING -> Formula //TODO: assumption might be different
-
-//all transferetypes by name, filled in Start rule
-universe TransferType = {B2BMobile, B2BWebsite, B2BPos}
+universe ACCOUNT_TYPES = { CC, DOMU, MIRROR, Income, Prepaid, Bisoo, Topup }
+universe OPERATION = { credit, debit }
+universe USER_TYPE_GROUP = { welcome, retail, company, full, employee, on_hold, MNGR, consumer, consumer_verified }
+universe CHANNEL = { Service, POS }
+universe METADATA = { null } //TODO
 
 policy whileRunning = skip
 
-rule Start = {
+rule Start = seqblock
+	print ACCOUNT_TYPES
 	print "------------------server init"
 	c2 := 0
 	program(self) := Program
-}
+endseqblock
 
-// ------------------------------------------------------------------
-//
-// Credit and Debit request rules
-//
-// ------------------------------------------------------------------
-
+//-----------------------------------------------------------------------------------------------------------
+//				begin globally used rules
+//-----------------------------------------------------------------------------------------------------------
 // send Response to client
 rule Send(response, mbr) = local response_text, response_subject in seq
   pop response_subject from response
@@ -76,37 +48,19 @@ derived YouMayProceedWith(transfer) = {
 }
 
 
-/* ASM - Template
-Symbols 	\in => element of
-			!\in => not element of
-
-CreditPreviewReq((channel, from, to, amount, custFlds), mbr) =
-	if Received(CreditPreviewReq(credit, channel, from, to, amount, custFlds), from: mbr) then
-		let transfer = (credit, channel, from, to, amount, custFlds)
-		let ttRes = transferTypeCheck(transfer)
-			if ttResult !\in TransferType then
-				Send(ErrMsg(NotPermitted(transfer, ttRes)), to: mbr)
-			else Send(YouMayProceedWith(transfer), to: mbr)
-		Consume(CreditPreviewReq(credit, channel, from, to, amount, custFlds), from: mbr)
-	where
-		transferTypeCheck(transfer ) \in
-			{tt}							if tt \in TransferType and Match(tt , transfer)
-			PowerSet(TransferTypeError) 	else
-		Match(tt , transfer) if
-			oper(tt) = credit and chan(tt) = channel and
-			owner(from) (elementof) fromMemberGroup(tt) and owner(to) (elementof) toMemberGroup(tt) and
-			sourceType(tt) = accountType(from) and destType(tt) = accountType(to) and
-			custFieldCond(tt, custFlds) = true
-*/
+//-----------------------------------------------------------------------------------------------------------
+//				begin CreditPreviewReq
+//-----------------------------------------------------------------------------------------------------------
 rule CreditPreviewReq(msg, mbr) =
 seq
 	print mbr + " -> CreditPreviewReq received: " + msg
-
-	let transfer = msg in //removed Received & Cosumed as mailbox logic slightly different implemented
-		let ttResult = transferTypeCheck(transfer) in
-			if ttResult notmemberof TransferType then //swap and invert?
-				Send(ErrorMsg(NotPermitted(transfer, ttResult)), mbr)
-			else Send(YouMayProceedWith(transfer), mbr)
+	
+	//not yet active
+	//let transfer = msg in //removed Received & Cosumed as mailbox logic slightly different implemented
+	//	let ttResult = transferTypeCheck(transfer) in
+	//		if ttResult notmemberof TransferType then //swap and invert?
+	//			Send(ErrorMsg(NotPermitted(transfer, ttResult)), mbr)
+	//		else Send(YouMayProceedWith(transfer), mbr)
 endseq
 //where
 	//transferTypeCheck
@@ -133,59 +87,41 @@ endseq
 										custFieldCond(tt, CUSTFLDS) = true
 	}
 
-
-/*
-CreditPerformReq((channel; from; to; amount; custFlds); mbr) =
-	if Received(CreditPerformReq(credit; channel; from; to; amount; custFlds); from: mbr) then
-		let transfer = (credit; channel; from; to; amount; custFlds)
-		let ttRes = transferTypeCheck(transfer)
-			if ttRes \in TransferType then
-				Send(ErrMsg(NotPermitted(transfer; ttRes)); to: mbr)
-			else let bal = balanceCheck(from; to; amount)
-				if bal = OK
-				then
-					Append(transaction(transfer; ttRes; today); Ledger)
-					Send(Confirmed(transfer); to: mbr)
-				else Send(ErrMsg(transfer; bal ); to: mbr)
-		Consume(CreditPerformReq(channel; from; to; amount; custFlds); from: mbr)
-	where
-		balanceCheck(from; to; amount) \in { OK } u Powerset(BalanceViolation)
-		balanceCheck(from; to; amount) = OK iff amountCond(ttRes)(amount) = true and
-			availBalance(from) >= amount and Receivable(amount; to)
-		ViolatesAmountCond(amount) if amountCond(ttRes)(amount) = false
-		ViolatesLowerLimit(from; amount) if availBalance(from) < amount
-		ViolatesUpperLimit(to; amount) if not Receivable(amount; to)
-		Receivable(amt; acc) iff balance(acc) + amt <= upperLimit(acc)
-*/
+//-----------------------------------------------------------------------------------------------------------
+//				begin CreditPerformReq
+//-----------------------------------------------------------------------------------------------------------
 rule CreditPerformReq(msg, mbr) = {
 	print mbr + " -> CreditPerformReq received" + msg
 }
-
+//-----------------------------------------------------------------------------------------------------------
+//				begin DebitPreviewReq
+//-----------------------------------------------------------------------------------------------------------
 rule DebitPreviewReq(msg, mbr) = {
 	print mbr + " -> DebitPreviewReq received" + msg
 }
 
+//-----------------------------------------------------------------------------------------------------------
+//				begin DebitPerformReq
+//-----------------------------------------------------------------------------------------------------------
 rule DebitPerformReq(msg, mbr) = {
 	print mbr + " -> DebitPerformReq received" + msg
 }
 
-
-// ------------------------------------------------------------------
+//-----------------------------------------------------------------------------------------------------------
+//				begin main programm
+//-----------------------------------------------------------------------------------------------------------
 rule Program = seq
-	//print "------------------tick: " + c2
-	//print "checking inbox"
-
-  	choose m in inboxOf(self) with getMessageSubject(m)="CreditReviewRequest" do seqblock
-	   	// receive messages
-    	msgIn := getMessageContent(m)
-
-    	// when message received call CreditReviewRequest
-    	if msgIn != undef then seqblock
-    		mbr := getMessageSender(m)
-    		print "Got Message: Sender -> " + mbr + "Message -> " + msgIn
-
-    		//CreditPreviewReq(msgIn, mbr)    		
+	forall m in inboxOf(self) do seqblock
+		//fetch message data
+		msubject := getMessageSubject(m)
+		msgIn := getMessageContent(m)
+		mbr := getMessageSender(m)
+		
+    	if msgIn != undef and mbr != undef then seqblock
+    		if msubject = "CreditReviewRequest" then CreditPreviewReq(msgIn, mbr)
+    		if msubject = "CreditPerformReq" then CreditPerformReq(msgIn, mbr)
+    		if msubject = "DebitPreviewReq" then DebitPreviewReq(msgIn, mbr)
+    		if msubject = "DebitPerformReq" then DebitPerformReq(msgIn, mbr)
 		endseqblock
     endseqblock
-    c2 := c2 + 1
 endseq

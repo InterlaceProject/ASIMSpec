@@ -4,16 +4,11 @@ use Standard
 
 init Start
 
-controlled counter:INTEGER
-
-
-
 scheduling whileRunning
 
+// not yet clear how asim scheduling works
 policy whileRunning = {
-	//schedule clientTest
 	schedule server
-	//schedule self
 }
 
 rule Start = {
@@ -22,16 +17,17 @@ rule Start = {
 	program(self) := Program
 }
 
+//-----------------------------------------------------------------------------------------------------------
+//				begin scheduler main programm
+//-----------------------------------------------------------------------------------------------------------
 rule Program = seq
-	//print "------------------tick: " + counter
-	
-	//create new client
+	//create new client every 10th tick
 	if counter % 10 = 0 then seq
 		createASIM initializedBy InitClient withProgram ProgramClient andPolicy ClientSkip in temploc
 	endseq
 	
+	//look into inbox if a client has been sent its message and could be destroyed
 	choose m in inboxOf(self) with getMessageSubject(m)="Done" do seq
-		print "--------------------------------------------------------------------------"
 		clientName := getMessageSender(m)
 		destroyASIM clientName
 		print "client removed: " + clientName
@@ -47,21 +43,21 @@ endseq
 policy ClientSkip = skip
 
 rule InitClient = par
-	print "------------------client init"
+	//init variables
 	sent := false
 	done := false
 endpar
 
 rule ProgramClient = par
-	if sent = true and done = false then par
+	if sent and not done then par
 		//"destroyASIM self" not working
 		//destroyASIM <name> would work but I don't know how to determine the name of the current ASIM
 		//=> send done message to scheduler which ends the asim by retrieving the sender name
-		//also, strangely it is not working sending the "Done" right after sending the credit review request in bottom if statement
+		//also, strangely it is not working sending the "Done" right after sending the credit review request in the bottom if statement
 		send "Done" to "scheduler" with subject "Done"
 		done := true
 	endpar
-	if sent = false then par
+	if not sent then par
 		send {
 				"from" -> "client",
 				"to" -> "somebody",
