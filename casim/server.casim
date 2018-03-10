@@ -48,17 +48,15 @@ derived YouMayProceedWith(transfer) = {
 //-----------------------------------------------------------------------------------------------------------
 //				begin CreditPreviewReq
 //-----------------------------------------------------------------------------------------------------------
-rule CreditPreviewReq(msg, mbr) =
-seq
+rule CreditPreviewReq(msg, mbr) = {
 	print mbr + " -> CreditPreviewReq received: " + msg
 	
-	//not yet active
 	//let transfer = msg in //removed Received & Cosumed as mailbox logic slightly different implemented
 	//	let ttResult = transferTypeCheck(transfer) in
 	//		if ttResult notmemberof TransferType then //swap and invert?
 	//			Send(ErrorMsg(NotPermitted(transfer, ttResult)), mbr)
 	//		else Send(YouMayProceedWith(transfer), mbr)
-endseq
+}
 //where
 	//transferTypeCheck
 	derived transferTypeCheck(msg) =
@@ -107,7 +105,7 @@ rule DebitPerformReq(msg, mbr) = {
 //-----------------------------------------------------------------------------------------------------------
 //				begin main programm
 //-----------------------------------------------------------------------------------------------------------
-rule Program = seq
+rule Program = {
 	forall m in inboxOf(self) do seqblock
 		//fetch message data
 		msubject := getMessageSubject(m)
@@ -121,4 +119,4 @@ rule Program = seq
     		if msubject = "DebitPerformReq" then DebitPerformReq(msgIn, mbr)
 		endseqblock
     endseqblock
-endseq
+}
