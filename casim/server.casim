@@ -15,9 +15,7 @@ universe METADATA = { null } //TODO
 policy whileRunning = skip
 
 rule Start = seqblock
-	print ACCOUNT_TYPES
-	print "------------------server init"
-	c2 := 0
+	print "ASIM server init ..."
 	program(self) := Program
 endseqblock
 
