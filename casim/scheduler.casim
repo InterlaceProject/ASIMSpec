@@ -20,10 +20,20 @@ rule Start = {
 //-----------------------------------------------------------------------------------------------------------
 //				begin scheduler main programm
 //-----------------------------------------------------------------------------------------------------------
+
+policy ClientSkip = skip
+
 rule Program = seq
-	//create new client every 10th tick
+
+	//create new clients (Company and Employee) every 10th tick
 	if counter % 10 = 0 then seq
-		createASIM initializedBy InitClient withProgram ProgramClient andPolicy ClientSkip in temploc
+	
+		print "Initialize a Company ASIM...."
+	    createASIM initializedBy InitCompany withProgram ProgramCompany andPolicy ClientSkip in temploc
+	    print "Initialize a Employe ASIM...."
+	    createASIM initializedBy InitEmployee withProgram ProgramEmployee andPolicy ClientSkip in temploc
+	    
+		//createASIM initializedBy InitClient withProgram ProgramClient andPolicy ClientSkip in temploc
 	endseq
 	
 	//look into inbox if a client has been sent its message and could be destroyed
@@ -33,38 +43,81 @@ rule Program = seq
 		print "client removed: " + clientName
 		print "--------------------------------------------------------------------------"
 	endseq
-	
 	counter := counter + 1
 endseq
 
 //-----------------------------------------------------------------------------------------------------------
 //				begin client code
 //-----------------------------------------------------------------------------------------------------------
-policy ClientSkip = skip
 
-rule InitClient = par
+rule InitCompany = par
 	//init variables
 	sent := false
 	done := false
+	
+	//Initialize Meta-data for "Company" group (at the moment only Obligatory MetaData for transactions)
+	
+	companyMemberID := "mario_bros"  			//Integer Unique member identifier (used in login)
+	firstName := "Mario" 						//String First
+	surName := "Bros" 							//String Surname
+	email := "mariobros@casim.net" 		//String e-mail address
+	phone := {"3401234567","34012345555"}		//String phone number(s)
+	capacity := 10000 							//Double Commitment to maximum balance or yearly volume
+	capacityDate := "21/03/2018" 				//DateTime Date capacity was set
+												//Double current balance???
+	availableCapacity :=  12000 				//Double Difference --> current balance-capacity = 2000 - (- 10000) 
+	creditPercent := 50	
 endpar
 
-rule ProgramClient = par
+rule InitEmployee = par
+	//init variables
+	sent := false
+	done := false
+	//Initialize Meta-data for "employee" group (at the moment only Obligatory MetaData)
+	employeeMemberID := "luigi_bros"  			//Integer Unique member identifier (used in login)
+	firstName := "Luigi" 						//String First
+	surName := "Bros" 							//String Surname
+	email := "luigibros@casim.net" 		//String e-mail address
+	phone := {"3401234567","34012345555"}		//String phone number(s)
+	capacity := 500 							//Double Commitment to maximum balance or yearly volume
+	capacityDate := "21/03/2018" 				//DateTime Date capacity was set
+	availableCapacity :=  600 					//Double Difference --> current balance-capacity 
+
+endpar
+
+
+rule ProgramCompany = par
 	if sent and not done then par
 		//"destroyASIM self" not working
 		//destroyASIM <name> would work but I don't know how to determine the name of the current ASIM
 		//=> send done message to scheduler which ends the asim by retrieving the sender name
 		//also, strangely it is not working sending the "Done" right after sending the credit review request in the bottom if statement
+		//Marylu: error in "Done after sending CreditPreviewRequest
+		
 		send "Done" to "scheduler" with subject "Done"
 		done := true
 	endpar
+	
 	if not sent then par
+		print "Company "+companyMemberID+" send a CreditPreviewReq to: "+employeeMemberID
 		send {
-				"from" -> "client",
-				"to" -> "somebody",
+				"from" -> companyMemberID,
+				"to" -> employeeMemberID,
 				"channel" -> "phone",
 				"amount"  -> 2000,
-				"custFlds" -> "Sent from Dynamic Client"
-			}  to "server" with subject "CreditReviewRequest"
+				"custFlds" -> "Operation CREDIT from Company to Employee"
+			}  
+			to "server" with subject "CreditPreviewRequest"
 		sent := true
+		
 	endpar
+endpar
+
+rule ProgramEmployee = par
+	if sent and not done then 
+	par
+		send "Received" to "scheduler" with subject "Received"
+		done := true
+	endpar
+
 endpar

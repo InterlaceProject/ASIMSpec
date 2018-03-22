@@ -10,11 +10,11 @@ universe ACCOUNT_TYPES = { CC, DOMU, MIRROR, Income, Prepaid, Bisoo, Topup }
 universe OPERATION = { credit, debit }
 universe USER_TYPE_GROUP = { welcome, retail, company, full, employee, on_hold, MNGR, consumer, consumer_verified }
 universe CHANNEL = { Service, POS }
-universe METADATA = { null } //TODO
 
 policy whileRunning = skip
 
-rule Start = {
+rule Start = {	
+	//simulate a transaction credit (PUSH) beetween a Company and an Employee
 	print "ASIM MUTUAL CREDIT server init"	
 	program(self) := Program
 }
@@ -22,10 +22,10 @@ rule Start = {
 //				begin globally used rules
 //-----------------------------------------------------------------------------------------------------------
 // send Response to client
+
 rule Send(response, mbr) = local response_text, response_subject in seq
   pop response_subject from response
   pop response_text from response
-
   send response_text to mbr with subject response_subject
 endseq
 
@@ -106,6 +106,8 @@ rule DebitPerformReq(msg, mbr) = {
 //				begin main programm
 //-----------------------------------------------------------------------------------------------------------
 rule Program = {
+
+		
 	forall m in inboxOf(self) do seqblock
 		//fetch message data
 		msubject := getMessageSubject(m)
@@ -113,10 +115,16 @@ rule Program = {
 		mbr := getMessageSender(m)
 		
     	if msgIn != undef and mbr != undef then seqblock
-    		if msubject = "CreditReviewRequest" then CreditPreviewReq(msgIn, mbr)
+    		if msubject = "CreditPreviewRequest" then CreditPreviewReq(msgIn, mbr)
     		if msubject = "CreditPerformReq" then CreditPerformReq(msgIn, mbr)
     		if msubject = "DebitPreviewReq" then DebitPreviewReq(msgIn, mbr)
     		if msubject = "DebitPerformReq" then DebitPerformReq(msgIn, mbr)
+    		
 		endseqblock
     endseqblock
 }
+
+
+
+
+

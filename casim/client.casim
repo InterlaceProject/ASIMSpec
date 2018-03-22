@@ -1,4 +1,7 @@
-//currently not used in run.icef
+//currently not used in run.icef --> 
+
+//Marylu: all clients (one client for group) can be placed in clients directory?
+ 
 //because the client should be created dynamicly
 //and with abitrary count not just one fixed client
 // ==> creation and destruction is happening inside the schdeduler
