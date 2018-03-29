@@ -1,0 +1,109 @@
+//Company, which could be a retailer, that can use B2E and B2B but not B2C (old group --> B2B.B2E)
+
+/*includeskip begin*/
+CoreASIM CreditCompanyEmployee
+
+use Standard 
+init dummy
+rule dummy = skip
+scheduling NoPolicy
+policy NoPolicy = skip
+/*includeskip end*/
+
+//The initialization rule.
+rule CreditCompanyEmployeeInit = par
+	//init variables
+	sent_preview := false
+	done_preview := false
+	sent_perform := false
+	done_perform := false
+	
+	//Initialize Meta-data  mandatory for the transaction for "Company" group
+	
+	company_MemberID := "mario_bros"  			//Integer Unique member identifier (used in login)
+	company_firstName := "Mario" 						//String First
+	company_surName := "Bros" 							//String Surname
+	company_email := "mariobros@casim.net" 		//String e-mail address
+	company_phone := {"3401234567","34012345555"}		//String phone number(s)
+	company_capacity := 10000 							//Double Commitment to maximum balance or yearly volume
+	company_capacityDate := "21/03/2018" 				//DateTime Date capacity was set								        //Double current balance???
+	company_availableCapacity :=  12000 				//Double Difference --> current balance-capacity = 2000 - (- 10000) 
+	company_creditPercent := 50	
+	
+	//Initialize Meta-data mandatory for the transaction for "employee" group
+	
+	empl_MemberID := "luigi_bros"  			//Integer Unique member identifier (used in login)
+	empl_firstName := "Luigi" 						//String First
+	empl_surName := "Bros" 							//String Surname
+	empl_email := "luigibros@casim.net" 		//String e-mail address
+	empl_phone := {"3401234567","34012345555"}		//String phone number(s)
+	empl_capacity := 500 							//Double Commitment to maximum balance or yearly volume
+	empl_capacityDate := "21/03/2018" 				//DateTime Date capacity was set
+	empl_availableCapacity :=  600 	       	//Double Difference --> current balance-capacity 
+	
+	
+	program(self) := Program
+		
+endpar
+
+rule CreditCompanyEmployeeProgram = par
+
+	if not sent_preview then par
+
+		print "Company "+company_MemberID+" send a CreditPreviewReq to: "+empl_MemberID
+		send {
+				"from" -> company_MemberID,
+				"to" -> empl_MemberID,
+				"channel" -> "phone",
+				"amount"  -> 2000,
+				"custFlds" -> "Operation PREVIEW CREDIT from Company to Employee"
+			}  
+			to "server" with subject "CreditPreviewRequest"
+		sent_preview := true
+	endpar
+	
+	
+	//CreditPreviewReq
+	if (exists m in inboxOf(self) with getMessageSubject(m)="Credit preview done") then par
+
+		print "Client receive message Credit preview done!"
+		done_preview := true
+	endpar
+		
+		
+	if done_preview then par
+	
+		print "Company "+company_MemberID+" send a CreditPerformReq to: "+empl_MemberID
+			send {
+					"from" -> company_MemberID,
+					"to" -> empl_MemberID,
+					"channel" -> "phone",
+					"amount"  -> 2000,
+					"custFlds" -> "Operation CREDIT from Company to Employee"
+				}  
+				to "server" with subject "CreditPreviewRequest"
+			sent_perform := true
+	endpar
+	
+			//CreditPerformReq
+		if (exists m in inboxOf(self) with getMessageSubject(m)="Credit Transfer done") then par
+			print "CreditPerformReq done!"
+			done_perform := true
+		endpar
+		
+		
+			if sent_perform and not done_perform then par
+	
+		//"destroyASIM self" not working
+		//destroyASIM <name> would work but I don't know how to determine the name of the current ASIM
+		//=> send done message to scheduler which ends the asim by retrieving the sender name
+		//also, strangely it is not working sending the "Done" right after sending the credit review request in the bottom if statement
+		
+		send "Done" to "scheduler" with subject "Done"
+		done_perform := true
+	endpar
+	
+endpar
+
+
+

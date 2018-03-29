@@ -2,11 +2,14 @@
    "id" : "interlace", 
    "schedulers" : [
        {
-	   "file" : "casim/scheduler.casim",
-       "include" : [
-       		"casim/clientTemplate.casim"
-       ],
-	   "start" : true
+		   "file" : "casim/scheduler.casim",
+	       "include" : [
+	       		"casim/clients/clientTemplate.casim",
+	       		"casim/clients/Company.casim",
+	       		"casim/clients/Credit_CompanyToEmployee.casim",
+	       		"casim/clients/Employee.casim"
+	       ],
+		   "start" : true
        }
    ], 
    "asims" : [       

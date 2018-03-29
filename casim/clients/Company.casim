@@ -1,0 +1,53 @@
+//Company, which could be a retailer, that can use B2E and B2B but not B2C (old group --> B2B.B2E)
+
+/*includeskip begin*/
+CoreASIM Company
+
+use Standard 
+init dummy
+rule dummy = skip
+scheduling NoPolicy
+policy NoPolicy = skip
+/*includeskip end*/
+
+//The initialization rule.
+rule CompanyInit = 
+par
+	//Initialize Meta-data (at the moment only Obligatory MetaData)
+	
+	companyMemberID := "mario_bros"  			//Integer Unique member identifier (used in login)
+	firstName := "Mario" 						//String First
+	surName := "Bros" 							//String Surname
+	email := "mariobros@casim.net" 		//String e-mail address
+	phone := {"3401234567","34012345555"}		//String phone number(s)
+	capacity := 10000 							//Double Commitment to maximum balance or yearly volume
+	capacityDate := "21/03/2018" 				//DateTime Date capacity was set
+	availableCapacity :=  12000 				//Double Difference of capacity and current balance
+	creditPercent := 50	
+	
+	program(self):= CompanyProgram
+	
+endpar
+
+
+rule CompanyProgram = 
+par
+	//A message corresponds to each operation. 
+	
+	//Here we put the operations allowed to the group Company
+	
+	//CreditPreviewReq
+	if (exists m in inboxOf(self) with getMessageSubject(m)="Credit preview done") then {
+		print "CreditPreviewReq done!"
+		//CreditPerformReq
+		if (exists m in inboxOf(self) with getMessageSubject(m)="Credit Transfer done") then
+			print "CreditPerformReq done!"
+	}
+	
+	//Managing all possible actions
+	
+	//Managing all errors messages 
+		
+endpar
+
+
