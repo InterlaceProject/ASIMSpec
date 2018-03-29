@@ -4,28 +4,41 @@ CoreASIM Employee
 
 use Standard 
 
-init Start
+init InitEmployee
+scheduling NoInternalAgents
 
 controlled capacity: DOUBLE
 controlled capacityDate: DATETIME
 controlled availableCapacity: DOUBLE
 
 //The initialization rule.
-rule Start = 
 
-par
-	//Initialize Employee Meta-data (at the moment only Obligatory MetaData)
-	employeeMemberID := "luigi_bros"  		//Integer Unique member identifier (used in login)
-	firstName := "Luigi" 					//String First
-	surName := "Bros" 						//String Surname
-	email := "luigibros@casim.net" 	//String e-mail address
-	phone := {"3401234567","34012345555"}	//String phone number(s)
-	capacity := 5000 						//Double Commitment to maximum balance or yearly volume
-	capacityDate := "21/03/2018" 			//DateTime Date capacity was set
-	availableCapacity :=  7000 				//Double Difference of capacity and current balance
-	
-	program(self):= EmployeeProgram
-	
+policy NoInternalAgents = skip
+
+rule InitEmployee = par
+	//init variables
+	sent := false
+	done := false
+	//Initialize Meta-data for "employee" group (at the moment only Obligatory MetaData)
+	employeeMemberID := "luigi_bros"  			//Integer Unique member identifier (used in login)
+	firstName := "Luigi" 						//String First
+	surName := "Bros" 							//String Surname
+	email := "luigibros@casim.net" 		//String e-mail address
+	phone := {"3401234567","34012345555"}		//String phone number(s)
+	capacity := 500 							//Double Commitment to maximum balance or yearly volume
+	capacityDate := "21/03/2018" 				//DateTime Date capacity was set
+	availableCapacity :=  600 	
+	program(self) := ProgramEmployee			//Double Difference --> current balance-capacity 
+endpar
+
+
+rule ProgramEmployee = par
+	if sent and not done then 
+	par
+		send "Received" to "scheduler" with subject "Received"
+		done := true
+	endpar
+
 endpar
 
 

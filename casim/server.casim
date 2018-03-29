@@ -11,6 +11,7 @@ universe OPERATION = { credit, debit }
 universe USER_TYPE_GROUP = { welcome, retail, company, full, employee, on_hold, MNGR, consumer, consumer_verified }
 universe CHANNEL = { Service, POS }
 
+
 policy whileRunning = skip
 
 rule Start = {	
@@ -49,13 +50,20 @@ derived YouMayProceedWith(transfer) = {
 //				begin CreditPreviewReq
 //-----------------------------------------------------------------------------------------------------------
 rule CreditPreviewReq(msg, mbr) = {
-	print mbr + " -> CreditPreviewReq received: " + msg
+	print mbr + " ----> CreditPreviewReq received: " + msg
 	
 	//let transfer = msg in //removed Received & Cosumed as mailbox logic slightly different implemented
-	//	let ttResult = transferTypeCheck(transfer) in
-	//		if ttResult notmemberof TransferType then //swap and invert?
-	//			Send(ErrorMsg(NotPermitted(transfer, ttResult)), mbr)
-	//		else Send(YouMayProceedWith(transfer), mbr)
+		//let ttResult = transferTypeCheck(transfer) in
+			//if ttResult notmemberof TransferType then //swap and invert?
+				//Send(ErrorMsg(NotPermitted(transfer, ttResult)), mbr)
+			//else Send(YouMayProceedWith(transfer), mbr)
+	
+	//Controlli e preview
+	print "Server send message Credit preview done" 
+	send "OK" to mbr with subject "Credit preview done"
+	
+	//Send(YouMayProceedWith(msg), mbr)
+
 }
 //where
 	//transferTypeCheck
@@ -106,8 +114,7 @@ rule DebitPerformReq(msg, mbr) = {
 //				begin main programm
 //-----------------------------------------------------------------------------------------------------------
 rule Program = {
-
-		
+	
 	forall m in inboxOf(self) do seqblock
 		//fetch message data
 		msubject := getMessageSubject(m)
@@ -116,9 +123,11 @@ rule Program = {
 		
     	if msgIn != undef and mbr != undef then seqblock
     		if msubject = "CreditPreviewRequest" then CreditPreviewReq(msgIn, mbr)
+    		
     		if msubject = "CreditPerformReq" then CreditPerformReq(msgIn, mbr)
-    		if msubject = "DebitPreviewReq" then DebitPreviewReq(msgIn, mbr)
-    		if msubject = "DebitPerformReq" then DebitPerformReq(msgIn, mbr)
+    		
+    		//if msubject = "DebitPreviewReq" then DebitPreviewReq(msgIn, mbr)
+    		//if msubject = "DebitPerformReq" then DebitPerformReq(msgIn, mbr)
     		
 		endseqblock
     endseqblock
