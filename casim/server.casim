@@ -4,6 +4,8 @@ use Standard
 
 init Start
 
+//include "../../../ASIMSpec/casim/client.casimmod"
+
 scheduling whileRunning
 
 universe ACCOUNT_TYPES = { CC, DOMU, MIRROR, Income, Prepaid, Bisoo, Topup }

@@ -3,6 +3,9 @@
    "schedulers" : [
        {
 	   "file" : "casim/scheduler.casim",
+       "include" : [
+       		"casim/clientTemplate.casim"
+       ],
 	   "start" : true
        }
    ], 
