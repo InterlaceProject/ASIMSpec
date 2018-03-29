@@ -31,7 +31,7 @@ rule ProgramClient = par
 				"to" -> "somebody",
 				"channel" -> "phone",
 				"amount"  -> 2000,
-				"custFlds" -> "Sent from Dynamic Client"
+				"custFlds" -> "Sent from Dynamic Client with include property"
 			}  to "server" with subject "CreditReviewRequest"
 		sent := true
 	endpar
