@@ -1,12 +1,14 @@
 CoreASIM clientTemplate
 
+/*includeskip begin*/
 use Standard
 
+use Standard 
 init dummy
-
-rule dummy = par
-	print "not in use"
-endpar
+rule dummy = skip
+scheduling NoPolicy
+policy NoPolicy = skip
+/*includeskip end*/
 
 policy ClientSkip = skip
 
