@@ -4,18 +4,15 @@
        {
 		   "file" : "casim/scheduler.casim",
 	       "include" : [
-	       		"casim/clients/clientTemplate.casim",
-	       		"casim/clients/Company.casim",
-	       		"casim/clients/Credit_CompanyToEmployee.casim",
-	       		"casim/clients/Employee.casim"
+	       		"casim/clients/clientTemplate.casim"
 	       ],
-		   "start" : true
+		   "start" : "true"
        }
    ], 
    "asims" : [       
        {
            "file" : "casim/server.casim",
-           "start" : true
+           "start" : "true"
        }
        
    ]
