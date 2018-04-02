@@ -1,6 +1,6 @@
+/*includeskip begin*/
 CoreASIM clientTemplate
 
-/*includeskip begin*/
 use Standard
 
 use Standard 
@@ -29,11 +29,11 @@ rule ProgramClient = par
 	endpar
 	if not sent then par
 		send {
-				"from" -> "client",
-				"to" -> "somebody",
-				"channel" -> "phone",
+				"from" -> "accId1",
+				"to" -> "accId2",
+				"channel" -> "Service",
 				"amount"  -> 2000,
-				"custFlds" -> "Sent from Dynamic Client with include property"
+				"metadata" -> {"message", "some transfer"}
 			}  to "server" with subject "CreditReviewRequest"
 		sent := true
 	endpar

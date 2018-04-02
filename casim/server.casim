@@ -4,25 +4,37 @@ use Standard
 
 init Start
 
-//include "../../../ASIMSpec/casim/client.casimmod"
-
 scheduling whileRunning
 
 universe ACCOUNT_TYPES = { CC, DOMU, MIRROR, Income, Prepaid, Bisoo, Topup }
 universe OPERATION = { credit, debit }
 universe USER_TYPE_GROUP = { welcome, retail, company, full, employee, on_hold, MNGR, consumer, consumer_verified }
 universe CHANNEL = { Service, POS }
-universe METADATA = { null } //TODO
+
+universe ACCOUNT_ID = {accId1, accId2}
+universe MEMBER_ID = {mbrId1, mbrId2}
+
+controlled accountTable: ACCOUNT_ID -> MAP
+controlled userGroupTable: MEMBER_ID -> USER_TYPE_GROUP
 
 policy whileRunning = skip
 
 rule Start = {
-	print "ASIM MUTUAL CREDIT server init"	
+	print "ASIM MUTUAL CREDIT server init"
+	
+	//in initaccounts.casim
+	InitAccounts_User()
+	
 	program(self) := Program
 }
 //-----------------------------------------------------------------------------------------------------------
 //				begin globally used rules
 //-----------------------------------------------------------------------------------------------------------
+//read value from a map (amap) identified with a key
+derived v(amap, key) =
+	return ret in
+		choose v in amap with key = nth(v, 1) do ret := nth(v, 2)
+
 // send Response to client
 rule Send(response, mbr) = local response_text, response_subject in seq
   pop response_subject from response
@@ -50,15 +62,35 @@ derived YouMayProceedWith(transfer) = {
 //-----------------------------------------------------------------------------------------------------------
 //				begin CreditPreviewReq
 //-----------------------------------------------------------------------------------------------------------
-rule CreditPreviewReq(msg, mbr) = {
+rule CreditPreviewReq(msg, mbr) = seq
 	print mbr + " -> CreditPreviewReq received: " + msg
+	
+	// read from properties
+	fromAccID := v(msg, "from")
+	print " fromAccID -> " + fromAccID
+	fromAccount := accountTable(fromAccID)
+	print " account -> " + fromAccount
+	fromMbrId := v(fromAccount, "MemberID")
+	print " fromMbrId -> " + fromMbrId
+	fromGrpId := userGroupTable(fromMbrId)
+	print " fromGrpId -> " + fromGrpId
+	
+	//read to properties
+	toAccID := v(msg, "to")
+	print " toAccID -> " + toAccID
+	toAccount := accountTable(toAccID)
+	print " account -> " + toAccount
+	toMbrId := v(toAccount, "MemberID")
+	print " toMbrId -> " + toMbrId
+	toGrpId := userGroupTable(toMbrId)
+	print " toGrpId -> " + toGrpId
 	
 	//let transfer = msg in //removed Received & Cosumed as mailbox logic slightly different implemented
 	//	let ttResult = transferTypeCheck(transfer) in
 	//		if ttResult notmemberof TransferType then //swap and invert?
 	//			Send(ErrorMsg(NotPermitted(transfer, ttResult)), mbr)
 	//		else Send(YouMayProceedWith(transfer), mbr)
-}
+endseq
 //where
 	//transferTypeCheck
 	derived transferTypeCheck(msg) =

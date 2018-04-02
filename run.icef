@@ -12,6 +12,9 @@
    "asims" : [       
        {
            "file" : "casim/server.casim",
+           "include" : [
+	       		"casim/initaccounts.casim"
+	       ],
            "start" : "true"
        }
        
