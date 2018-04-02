@@ -124,12 +124,20 @@ rule CreditPreviewReq(msg, mbr) = seq
 	
 	//account connectivity test
 	if (toAccountType memberof ac) then
-		print "---- accounts connected"
+		print "---- accounts connected ----"
 	else par
-		print "---- ERROR: accounts not connected"
+		print "---- ERROR: accounts not connected ----"
 		error := true
 	endpar
 	
+	//TODO: attach error
+	if (error) then
+		send "ERROR" to mbr with subject "DoNotProceedMessage"
+	else seq
+		print "---- sending ok ProceedMessage to: " + mbr
+		
+		send "OK" to mbr with subject "ProceedMessage"
+	endseq
 	//let transfer = msg in //removed Received & Cosumed as mailbox logic slightly different implemented
 	//	let ttResult = transferTypeCheck(transfer) in
 	//		if ttResult notmemberof TransferType then //swap and invert?

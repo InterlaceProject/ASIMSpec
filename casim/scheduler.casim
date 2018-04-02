@@ -9,6 +9,7 @@ scheduling whileRunning
 // not yet clear how asim scheduling works
 policy whileRunning = {
 	schedule server
+	//if (temploc != undef) then schedule temploc
 }
 
 rule Start = {

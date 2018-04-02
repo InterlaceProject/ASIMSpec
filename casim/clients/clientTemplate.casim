@@ -16,16 +16,43 @@ rule InitClient = par
 	//init variables
 	sent := false
 	done := false
+	proceedmessage := false
 endpar
 
 rule ProgramClient = par
-	if sent and not done then par
+	if sent and proceedmessage and not done then par
 		//"destroyASIM self" not working
 		//destroyASIM <name> would work but I don't know how to determine the name of the current ASIM
 		//=> send done message to scheduler which ends the asim by retrieving the sender name
 		//also, strangely it is not working sending the "Done" right after sending the credit review request in the bottom if statement
 		send "Done" to "scheduler" with subject "Done"
 		done := true
+	endpar
+	// check for proceedmessage message
+	if sent and not proceedmessage and not done then par
+		forall m in inboxOf(self) do seq
+			//fetch message data
+			msgSubject := getMessageSubject(m)
+			msgIn := getMessageContent(m) //maybe contains some kind of signature in production
+			mbr := getMessageSender(m)
+
+print "------------------------------------------------got message: " + msgSubject
+			
+			//only accept from server
+			if (mbr = "server" and msgSubject = "ProceedMessage") then seq
+				send {
+					"from" -> "accId1",
+					"to" -> "accId2",
+					"channel" -> "Service",
+					"amount"  -> 2000,
+					"metadata" -> {"message", "some transfer"}
+				}  to "server" with subject "CreditPerformReq"
+				
+				proceedmessage := true
+			endseq
+			else
+				print "cannot proceed with request: " + msgIn
+		endseq
 	endpar
 	if not sent then par
 		send {
