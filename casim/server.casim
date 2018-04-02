@@ -8,6 +8,7 @@ scheduling whileRunning
 
 universe ACCOUNT_TYPES = { CC, DOMU, MIRROR, Income, Prepaid, Bisoo, Topup }
 universe OPERATION = { credit, debit }
+universe UNIT = {SRD, EUR}
 universe USER_TYPE_GROUP = { welcome, retail, company, full, employee, on_hold, MNGR, consumer, consumer_verified }
 universe CHANNEL = { Service, POS }
 
@@ -16,6 +17,8 @@ universe MEMBER_ID = {mbrId1, mbrId2}
 
 controlled accountTable: ACCOUNT_ID -> MAP
 controlled userGroupTable: MEMBER_ID -> USER_TYPE_GROUP
+controlled TT: OPERATION * UNIT * USER_TYPE_GROUP -> SET
+controlled accountConnectivity: OPERATION * UNIT * ACCOUNT_TYPES -> SET
 
 policy whileRunning = skip
 
@@ -23,14 +26,14 @@ rule Start = {
 	print "ASIM MUTUAL CREDIT server init"
 	
 	//in initaccounts.casim
-	InitAccounts_User()
+	InitData()
 	
 	program(self) := Program
 }
 //-----------------------------------------------------------------------------------------------------------
 //				begin globally used rules
 //-----------------------------------------------------------------------------------------------------------
-//read value from a map (amap) identified with a key
+//read value from a map (amap) identified by a key
 derived v(amap, key) =
 	return ret in
 		choose v in amap with key = nth(v, 1) do ret := nth(v, 2)
@@ -67,23 +70,65 @@ rule CreditPreviewReq(msg, mbr) = seq
 	
 	// read from properties
 	fromAccID := v(msg, "from")
-	print " fromAccID -> " + fromAccID
+	print "fromAccID -> " + fromAccID
 	fromAccount := accountTable(fromAccID)
-	print " account -> " + fromAccount
+	print "account -> " + fromAccount
 	fromMbrId := v(fromAccount, "MemberID")
-	print " fromMbrId -> " + fromMbrId
+	print "fromMbrId -> " + fromMbrId
 	fromGrpId := userGroupTable(fromMbrId)
-	print " fromGrpId -> " + fromGrpId
+	print "fromGrpId -> " + fromGrpId
+	fromUnit := v(fromAccount, "unit")
+	print "fromUnit -> " + fromUnit
+	fromAccountType := v(fromAccount, "accountType")
+	print "fromAccountType -> " + fromAccountType
 	
 	//read to properties
 	toAccID := v(msg, "to")
-	print " toAccID -> " + toAccID
+	print "toAccID -> " + toAccID
 	toAccount := accountTable(toAccID)
-	print " account -> " + toAccount
+	print "account -> " + toAccount
 	toMbrId := v(toAccount, "MemberID")
-	print " toMbrId -> " + toMbrId
+	print "toMbrId -> " + toMbrId
 	toGrpId := userGroupTable(toMbrId)
-	print " toGrpId -> " + toGrpId
+	print "toGrpId -> " + toGrpId
+	toUnit := v(toAccount, "unit")
+	print "toUnit -> " + toUnit
+	toAccountType := v(toAccount, "accountType")
+	print "toAccountType -> " + toAccountType
+	
+	
+	// checks begin -------------------------------
+	error := false
+	
+	// unit same
+	if (fromUnit = toUnit) then
+		print "---- Units are matching ----"
+	else par
+		print "---- ERROR: Units mismatch ----"
+		error := true
+	endpar
+	
+	tt := TT("credit", fromUnit, fromGrpId)
+	print "TT -> " + tt
+	
+	//TT check
+	if (toGrpId memberof tt) then
+		print "---- group in TT ----"
+	else par
+		print "---- ERROR: group NOT in TT ----"
+		error := true
+	endpar
+	
+	ac := accountConnectivity("credit", fromUnit, fromAccountType)
+	print "AC -> " + ac
+	
+	//account connectivity test
+	if (toAccountType memberof ac) then
+		print "---- accounts connected"
+	else par
+		print "---- ERROR: accounts not connected"
+		error := true
+	endpar
 	
 	//let transfer = msg in //removed Received & Cosumed as mailbox logic slightly different implemented
 	//	let ttResult = transferTypeCheck(transfer) in

@@ -13,7 +13,7 @@
        {
            "file" : "casim/server.casim",
            "include" : [
-	       		"casim/initaccounts.casim"
+	       		"casim/initdata.casim"
 	       ],
            "start" : "true"
        }
