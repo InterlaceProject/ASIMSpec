@@ -65,7 +65,11 @@ derived YouMayProceedWith(transfer) = {
 //-----------------------------------------------------------------------------------------------------------
 //				begin CreditPreviewReq
 //-----------------------------------------------------------------------------------------------------------
-rule CreditPreviewReq(msg, mbr) = seq
+rule CreditPreviewReq(msg, mbr) = 
+		local error, tt, ac,
+				fromAccID, fromAccount, fromMbrId, fromGrpId, fromUnit, fromAccountType,
+				toAccID, toAccount, toMbrId, toGrpId, toUnit, toAccountType in
+seq
 	print mbr + " -> CreditPreviewReq received: " + msg
 	
 	// read from properties
@@ -98,76 +102,52 @@ rule CreditPreviewReq(msg, mbr) = seq
 	
 	
 	// checks begin -------------------------------
-	error := false
 	
 	// same unit?
-	if (fromUnit = toUnit) then
-		print "---- Units are matching ----"
-	else par
-		print "---- ERROR: Units mismatch ----"
-		error := true
-	endpar
-	
-	tt := TT("credit", fromUnit, fromGrpId)
-	print "TT -> " + tt
-	
-	//TT check
-	if (toGrpId memberof tt) then
-		print "---- group in TT ----"
-	else par
-		print "---- ERROR: group NOT in TT ----"
-		error := true
-	endpar
-	
-	ac := accountConnectivity("credit", fromUnit, fromAccountType)
-	print "AC -> " + ac
-	
-	//account connectivity test
-	if (toAccountType memberof ac) then
-		print "---- accounts connected ----"
-	else par
-		print "---- ERROR: accounts not connected ----"
-		error := true
-	endpar
-	
-	//TODO: attach error
-	if (error) then
-		send "ERROR" to "mbrId1" with subject "DoNotProceedMessage"
-	else seq
-		print "---- sending ok ProceedMessage to: " + "mbrId1"
+	if (fromUnit = toUnit) then seq
+		print "---- units are equal ----"
 		
-		send "OK" to "mbrId1" with subject "ProceedMessage"
+		tt := TT("credit", fromUnit, fromGrpId)
+		print "TT -> " + tt
+		
+		//TT check
+		if (toGrpId memberof tt) then seq
+			print "---- group in TT ----"
+			
+			ac := accountConnectivity("credit", fromUnit, fromAccountType)
+			print "AC -> " + ac
+			
+			//account connectivity test
+			if (toAccountType memberof ac) then
+				print "---- accounts connected ----"
+			else par
+				error := "accounts not connected"				
+			endpar
+		endseq
+		else par
+			error := "group NOT in TT"
+		endpar
 	endseq
-	//let transfer = msg in //removed Received & Cosumed as mailbox logic slightly different implemented
-	//	let ttResult = transferTypeCheck(transfer) in
-	//		if ttResult notmemberof TransferType then //swap and invert?
-	//			Send(ErrorMsg(NotPermitted(transfer, ttResult)), mbr)
-	//		else Send(YouMayProceedWith(transfer), mbr)
+	else par
+		error := "Units mismatch"
+	endpar
+	
+
+	// send ProceedMessage if no eror occured
+	if (error = undef) then seq
+		print "---- sending ok ProceedMessage to: " + mbr
+		
+		send "OK" to mbr with subject "ProceedMessage"
+		
+		//cannot tell why but without this additional skip
+		//the previous message is not sent
+		skip
+	endseq
+	// send DoNotProceedMessage if eror detected
+	else seq
+		send "ERROR: " + error to mbr with subject "DoNotProceedMessage"		
+	endseq
 endseq
-//where
-	//transferTypeCheck
-	derived transferTypeCheck(msg) =
-	{
-		if {tt | tt in TransferType with Match(tt, msg)} != undef then
-			{tt | tt in TransferType with Match(tt, msg)}
-		else
-			powerset(TransferTypeError) //why powerset ???
-	}
-	//Match
-	derived Match(tt, transfer) =
-	{
-		return match in
-			//choose is not defined in D2.1 rules but needed to have the parameters
-			//FROM, TO, CHANNEL & CUSTFLDS available for the matching part
-			choose c in transfer with "channel" memberof c do let CHANNEL = last(c) in
-				choose f in transfer with "from" memberof f do let FROM = last(f) in
-					choose t in transfer with "to" memberof t do let TO = last(t) in
-					 	choose cf in transfer with "to" memberof cf do let CUSTFLDS = last(cf) in
-						 	match := oper(tt) = credit and chan(tt) = CHANNEL and
-										owner(FROM) memberof fromMemberGroup(tt) and owner(TO) memberof toMemberGroup(tt) and
-										sourceType(tt) = accountType(FROM) and destType(tt) = accountType(TO) and
-										custFieldCond(tt, CUSTFLDS) = true
-	}
 
 //-----------------------------------------------------------------------------------------------------------
 //				begin CreditPerformReq

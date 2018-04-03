@@ -22,6 +22,7 @@ endpar
 
 rule ProgramClient = par
 	cnt := cnt + 1
+	
 	if sent and proceedmessage and not done then par
 		//"destroyASIM self" not working
 		//destroyASIM <name> would work but I don't know how to determine the name of the current ASIM
@@ -46,19 +47,18 @@ rule ProgramClient = par
 	endpar
 endpar
 
-rule ReadProceedMessage = {
-	if (cnt % 20 = 0) then print "waiting for ProceedMessage"
-
+rule ReadProceedMessage = local msgSubject, msgIn, mbr, gotmessage in {
+	if (cnt % 20 = 0) then print "waiting for ProceedMessage " + inboxOf(self)
+	gotmessage := false
+	
 	forall m in inboxOf(self) do seq
 		//fetch message data
 		msgSubject := getMessageSubject(m)
 		msgIn := getMessageContent(m) //maybe contains some kind of signature in production
 		mbr := getMessageSender(m)
-
-print "------------------------------------------------got message: " + msgSubject
-			
+					
 			//only accept from server
-		if (mbr = "server" and msgSubject = "ProceedMessage") then seq
+		if (mbr = "server@server" and msgSubject = "ProceedMessage") then seq
 			send {
 				"from" -> "accId1",
 				"to" -> "accId2",
@@ -69,7 +69,9 @@ print "------------------------------------------------got message: " + msgSubje
 			
 			proceedmessage := true
 		endseq
-		else
+		else seq
 			print "cannot proceed with request: " + msgIn
+			proceedmessage := true
+		endseq
 	endseq
 }

@@ -3,8 +3,9 @@ CoreASIM scheduler
 use Standard
 
 init Start
-
 scheduling whileRunning
+
+controlled counter: INTEGER
 
 // not yet clear how asim scheduling works
 policy whileRunning = {
@@ -24,7 +25,7 @@ rule Start = {
 rule Program = seq
 	//create new client on the 15th tick
 	if counter = 15 then seq
-		createASIM mbrId1  initializedBy InitClient withProgram ProgramClient andPolicy ClientSkip in temploc
+		createASIM initializedBy InitClient withProgram ProgramClient andPolicy ClientSkip in temploc
 	endseq
 	
 	//look into inbox if a client has been sent its message and could be destroyed

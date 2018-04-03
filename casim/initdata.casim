@@ -36,6 +36,19 @@ rule InitData = {
 		"availableCapacity" -> 100000
 	}
 	
+	accountTable("accId3") := {
+		"AccountID" -> "accId3",
+		"accountType" -> "Income",
+		"MemberID" -> "mbrId2",
+		"unit" -> "EUR",
+		"balance" -> 10000,
+		"creditLimit" -> 10000,
+		"creditLimitDate" -> "",
+		"availableBalance" -> 20000,
+		"upperLimit" -> 20000,
+		"availableCapacity" -> 100000
+	}
+	
 	//init user groups
 	userGroupTable("mbrId1") := "company"
 	userGroupTable("mbrId2") := "company"
