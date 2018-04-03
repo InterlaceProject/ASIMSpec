@@ -17,9 +17,11 @@ rule InitClient = par
 	sent := false
 	done := false
 	proceedmessage := false
+	cnt := 0
 endpar
 
 rule ProgramClient = par
+	cnt := cnt + 1
 	if sent and proceedmessage and not done then par
 		//"destroyASIM self" not working
 		//destroyASIM <name> would work but I don't know how to determine the name of the current ASIM
@@ -30,29 +32,7 @@ rule ProgramClient = par
 	endpar
 	// check for proceedmessage message
 	if sent and not proceedmessage and not done then par
-		forall m in inboxOf(self) do seq
-			//fetch message data
-			msgSubject := getMessageSubject(m)
-			msgIn := getMessageContent(m) //maybe contains some kind of signature in production
-			mbr := getMessageSender(m)
-
-print "------------------------------------------------got message: " + msgSubject
-			
-			//only accept from server
-			if (mbr = "server" and msgSubject = "ProceedMessage") then seq
-				send {
-					"from" -> "accId1",
-					"to" -> "accId2",
-					"channel" -> "Service",
-					"amount"  -> 2000,
-					"metadata" -> {"message", "some transfer"}
-				}  to "server" with subject "CreditPerformReq"
-				
-				proceedmessage := true
-			endseq
-			else
-				print "cannot proceed with request: " + msgIn
-		endseq
+		ReadProceedMessage()
 	endpar
 	if not sent then par
 		send {
@@ -65,3 +45,31 @@ print "------------------------------------------------got message: " + msgSubje
 		sent := true
 	endpar
 endpar
+
+rule ReadProceedMessage = {
+	if (cnt % 20 = 0) then print "waiting for ProceedMessage"
+
+	forall m in inboxOf(self) do seq
+		//fetch message data
+		msgSubject := getMessageSubject(m)
+		msgIn := getMessageContent(m) //maybe contains some kind of signature in production
+		mbr := getMessageSender(m)
+
+print "------------------------------------------------got message: " + msgSubject
+			
+			//only accept from server
+		if (mbr = "server" and msgSubject = "ProceedMessage") then seq
+			send {
+				"from" -> "accId1",
+				"to" -> "accId2",
+				"channel" -> "Service",
+				"amount"  -> 2000,
+				"metadata" -> {"message", "some transfer"}
+			}  to "server" with subject "CreditPerformReq"
+			
+			proceedmessage := true
+		endseq
+		else
+			print "cannot proceed with request: " + msgIn
+	endseq
+}

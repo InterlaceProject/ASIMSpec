@@ -22,15 +22,16 @@ rule Start = {
 //				begin scheduler main programm
 //-----------------------------------------------------------------------------------------------------------
 rule Program = seq
-	//create new client every 10th tick
-	if counter % 10 = 0 then seq
-		createASIM initializedBy InitClient withProgram ProgramClient andPolicy ClientSkip in temploc
+	//create new client on the 15th tick
+	if counter = 15 then seq
+		createASIM mbrId1  initializedBy InitClient withProgram ProgramClient andPolicy ClientSkip in temploc
 	endseq
 	
 	//look into inbox if a client has been sent its message and could be destroyed
 	choose m in inboxOf(self) with getMessageSubject(m)="Done" do seq
 		clientName := getMessageSender(m)
 		destroyASIM clientName
+		temploc := undef
 		print "client removed: " + clientName
 		print "--------------------------------------------------------------------------"
 	endseq

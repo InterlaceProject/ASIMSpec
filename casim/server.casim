@@ -72,7 +72,7 @@ rule CreditPreviewReq(msg, mbr) = seq
 	fromAccID := v(msg, "from")
 	print "fromAccID -> " + fromAccID
 	fromAccount := accountTable(fromAccID)
-	print "account -> " + fromAccount
+	print "fromAccount -> " + fromAccount
 	fromMbrId := v(fromAccount, "MemberID")
 	print "fromMbrId -> " + fromMbrId
 	fromGrpId := userGroupTable(fromMbrId)
@@ -86,7 +86,7 @@ rule CreditPreviewReq(msg, mbr) = seq
 	toAccID := v(msg, "to")
 	print "toAccID -> " + toAccID
 	toAccount := accountTable(toAccID)
-	print "account -> " + toAccount
+	print "toAccount -> " + toAccount
 	toMbrId := v(toAccount, "MemberID")
 	print "toMbrId -> " + toMbrId
 	toGrpId := userGroupTable(toMbrId)
@@ -100,7 +100,7 @@ rule CreditPreviewReq(msg, mbr) = seq
 	// checks begin -------------------------------
 	error := false
 	
-	// unit same
+	// same unit?
 	if (fromUnit = toUnit) then
 		print "---- Units are matching ----"
 	else par
@@ -132,11 +132,11 @@ rule CreditPreviewReq(msg, mbr) = seq
 	
 	//TODO: attach error
 	if (error) then
-		send "ERROR" to mbr with subject "DoNotProceedMessage"
+		send "ERROR" to "mbrId1" with subject "DoNotProceedMessage"
 	else seq
-		print "---- sending ok ProceedMessage to: " + mbr
+		print "---- sending ok ProceedMessage to: " + "mbrId1"
 		
-		send "OK" to mbr with subject "ProceedMessage"
+		send "OK" to "mbrId1" with subject "ProceedMessage"
 	endseq
 	//let transfer = msg in //removed Received & Cosumed as mailbox logic slightly different implemented
 	//	let ttResult = transferTypeCheck(transfer) in
