@@ -1,5 +1,6 @@
 CoreASIM server
 
+use TurboASMPlugin
 use Standard
 
 init Start
@@ -38,39 +39,42 @@ derived v(amap, key) =
 	return ret in
 		choose v in amap with key = nth(v, 1) do ret := nth(v, 2)
 
-// send Response to client
-rule Send(response, mbr) = local response_text, response_subject in seq
-  pop response_subject from response
-  pop response_text from response
-
-  send response_text to mbr with subject response_subject
-endseq
-
-//prepare error message
-derived ErrorMsg(text) = {
-  ["Error", text]
-}
-
 // not permitted message
-derived NotPermitted(transfer, ttResult) = {
-	"Error occured; action not permitted: " + transfer + "; " + ttResult
+rule NotPermitted(transfer, error, mbr) = {
+	send error + " for transfer: " + transfer to mbr with subject "DoNotProceedMessage"
 }
 
 //prepare normal message
-derived YouMayProceedWith(transfer) = {
-	["YouMayProceedWith", "You may proceed with " + transfer]
+rule YouMayProceedWith(transfer, mbr) = {
+	send transfer to mbr with subject "ProceedMessage"
 }
 
 
 //-----------------------------------------------------------------------------------------------------------
 //				begin CreditPreviewReq
 //-----------------------------------------------------------------------------------------------------------
-rule CreditPreviewReq(msg, mbr) = 
-		local error, tt, ac,
+
+rule CreditPreviewReq(msg, mbr) = local error in seqblock
+	print mbr + " -> CreditPreviewReq received: " + msg
+	
+	error <- CreditPreviewCheck(msg, mbr)
+	
+	if (error != undef) then seqblock
+		// send DoNotProceedMessage if eror detected
+		NotPermitted(msg, error, mbr)
+	endseqblock
+	else seqblock
+		// send ProceedMessage if no eror occured
+		YouMayProceedWith(msg, mbr)
+	endseqblock
+endseqblock
+
+rule CreditPreviewCheck(msg, mbr) =
+	local errormessage, tt, ac,
 				fromAccID, fromAccount, fromMbrId, fromGrpId, fromUnit, fromAccountType,
 				toAccID, toAccount, toMbrId, toGrpId, toUnit, toAccountType in
-seq
-	print mbr + " -> CreditPreviewReq received: " + msg
+seqblock
+	errormessage := undef
 	
 	// read from properties
 	fromAccID := v(msg, "from")
@@ -104,14 +108,14 @@ seq
 	// checks begin -------------------------------
 	
 	// same unit?
-	if (fromUnit = toUnit) then seq
+	if (fromUnit = toUnit) then seqblock
 		print "---- units are equal ----"
 		
 		tt := TT("credit", fromUnit, fromGrpId)
 		print "TT -> " + tt
 		
 		//TT check
-		if (toGrpId memberof tt) then seq
+		if (toGrpId memberof tt) then seqblock
 			print "---- group in TT ----"
 			
 			ac := accountConnectivity("credit", fromUnit, fromAccountType)
@@ -121,37 +125,25 @@ seq
 			if (toAccountType memberof ac) then
 				print "---- accounts connected ----"
 			else par
-				error := "accounts not connected"				
+				errormessage := "accounts not connected"				
 			endpar
-		endseq
+		endseqblock
 		else par
-			error := "group NOT in TT"
+			errormessage := "group NOT in TT"
 		endpar
-	endseq
+	endseqblock
 	else par
-		error := "Units mismatch"
+		errormessage := "Units mismatch"
 	endpar
 	
-
-	// send ProceedMessage if no eror occured
-	if (error = undef) then seq
-		send "OK" to mbr with subject "ProceedMessage"
-		
-		//cannot tell why but without this additional skip
-		//the previous message is not sent
-		skip
-	endseq
-	// send DoNotProceedMessage if eror detected
-	else seq
-		send "ERROR: " + error to mbr with subject "DoNotProceedMessage"		
-	endseq
-endseq
+	result := errormessage
+endseqblock
 
 //-----------------------------------------------------------------------------------------------------------
 //				begin CreditPerformReq
 //-----------------------------------------------------------------------------------------------------------
 rule CreditPerformReq(msg, mbr) = {
-	print mbr + " -> CreditPerformReq received" + msg
+	print mbr + " -> CreditPerformReq received: " + msg
 }
 //-----------------------------------------------------------------------------------------------------------
 //				begin DebitPreviewReq

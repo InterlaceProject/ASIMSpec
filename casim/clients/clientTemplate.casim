@@ -18,6 +18,13 @@ rule InitClient = par
 	done := false
 	proceedmessage := false
 	cnt := 0
+	CREDITREQUEST := {
+					"from" -> "accId1",
+					"to" -> "accId2",
+					"channel" -> "Service",
+					"amount"  -> 2000,
+					"metadata" -> {"message", "some transfer"}
+				}
 endpar
 
 rule ProgramClient = local msgSubject, message, mbr in par
@@ -43,13 +50,7 @@ rule ProgramClient = local msgSubject, message, mbr in par
 			if (mbr = "server@server") then seq
 				if msgSubject = "ProceedMessage" then seq
 					print "sending message CreditPerformReq to server"
-					send {
-							"from" -> "accId1",
-							"to" -> "accId2",
-							"channel" -> "Service",
-							"amount"  -> 2000,
-							"metadata" -> {"message", "some transfer"}
-						}  to "server" with subject "CreditPerformReq"
+					send CREDITREQUEST  to "server" with subject "CreditPerformReq"
 					//dummy skip - if left out, above send is not working
 					skip
 				endseq
@@ -66,13 +67,7 @@ rule ProgramClient = local msgSubject, message, mbr in par
 	
 	//send initial request
 	if not sent then par
-		send {
-				"from" -> "accId1",
-				"to" -> "accId2",
-				"channel" -> "Service",
-				"amount"  -> 2000,
-				"metadata" -> {"message", "some transfer"}
-			}  to "server" with subject "CreditReviewRequest"
+		send CREDITREQUEST  to "server" with subject "CreditReviewRequest"
 		sent := true
 	endpar
 endpar
