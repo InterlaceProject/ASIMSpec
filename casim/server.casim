@@ -136,6 +136,8 @@ seqblock
 		errormessage := "Units mismatch"
 	endpar
 	
+	//TODO: limits checks
+	
 	result := errormessage
 endseqblock
 
