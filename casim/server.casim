@@ -25,7 +25,7 @@ policy whileRunning = skip
 rule Start = {
 	print "ASIM MUTUAL CREDIT server init"
 	
-	//in initaccounts.casim
+	//defined in initaccounts.casim
 	InitData()
 	
 	program(self) := Program
