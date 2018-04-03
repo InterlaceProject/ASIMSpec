@@ -135,8 +135,6 @@ seq
 
 	// send ProceedMessage if no eror occured
 	if (error = undef) then seq
-		print "---- sending ok ProceedMessage to: " + mbr
-		
 		send "OK" to mbr with subject "ProceedMessage"
 		
 		//cannot tell why but without this additional skip

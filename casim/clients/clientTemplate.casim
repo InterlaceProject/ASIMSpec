@@ -20,21 +20,52 @@ rule InitClient = par
 	cnt := 0
 endpar
 
-rule ProgramClient = par
+rule ProgramClient = local msgSubject, message, mbr in par
 	cnt := cnt + 1
 	
+	//send done message
 	if sent and proceedmessage and not done then par
 		//"destroyASIM self" not working
 		//destroyASIM <name> would work but I don't know how to determine the name of the current ASIM
 		//=> send done message to scheduler which ends the asim by retrieving the sender name
-		//also, strangely it is not working sending the "Done" right after sending the credit review request in the bottom if statement
 		send "Done" to "scheduler" with subject "Done"
 		done := true
 	endpar
+	
 	// check for proceedmessage message
-	if sent and not proceedmessage and not done then par
-		ReadProceedMessage()
-	endpar
+	if sent and not proceedmessage and not done then seq		
+		forall m in inboxOf(self) do seq
+			//fetch message data
+			msgSubject := getMessageSubject(m)
+			message := getMessageContent(m) //maybe contains some kind of signature in production
+			mbr := getMessageSender(m)
+			
+			if (mbr = "server@server") then seq
+				if msgSubject = "ProceedMessage" then seq
+					print "sending message CreditPerformReq to server"
+					send {
+							"from" -> "accId1",
+							"to" -> "accId2",
+							"channel" -> "Service",
+							"amount"  -> 2000,
+							"metadata" -> {"message", "some transfer"}
+						}  to "server" with subject "CreditPerformReq"
+					//dummy skip - if left out, above send is not working
+					skip
+				endseq
+				else
+					print "cannot proceed with request: " + message
+					
+				proceedmessage := true
+			endseq else seq
+				if cnt % 20 = 0 then seq
+					print "waiting for ProceedMessage..."
+				endseq
+			endseq
+		endseq					
+	endseq
+	
+	//send initial request
 	if not sent then par
 		send {
 				"from" -> "accId1",
@@ -46,32 +77,3 @@ rule ProgramClient = par
 		sent := true
 	endpar
 endpar
-
-rule ReadProceedMessage = local msgSubject, msgIn, mbr, gotmessage in {
-	if (cnt % 20 = 0) then print "waiting for ProceedMessage " + inboxOf(self)
-	gotmessage := false
-	
-	forall m in inboxOf(self) do seq
-		//fetch message data
-		msgSubject := getMessageSubject(m)
-		msgIn := getMessageContent(m) //maybe contains some kind of signature in production
-		mbr := getMessageSender(m)
-					
-			//only accept from server
-		if (mbr = "server@server" and msgSubject = "ProceedMessage") then seq
-			send {
-				"from" -> "accId1",
-				"to" -> "accId2",
-				"channel" -> "Service",
-				"amount"  -> 2000,
-				"metadata" -> {"message", "some transfer"}
-			}  to "server" with subject "CreditPerformReq"
-			
-			proceedmessage := true
-		endseq
-		else seq
-			print "cannot proceed with request: " + msgIn
-			proceedmessage := true
-		endseq
-	endseq
-}
