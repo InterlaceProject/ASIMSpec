@@ -14,7 +14,6 @@ policy whileRunning = {
 }
 
 rule Start = {
-	print "------------------scheduler init"
 	counter := 0
 	program(self) := Program
 }
