@@ -9,13 +9,45 @@ policy NoPolicy = skip
 
 
 rule InitData = {
+	//init profile data
+	profileTable("mbrId1") := {
+		"lowBalanceAlert" -> 700,
+		"highBalanceAlert" -> 1000,
+		
+		"highVolumeAlert" -> 10000,
+		"capacity" -> 100000,
+		//"saleVolume" -> 100000 //high volumn alert
+		"saleVolume" -> 50000 //might be place somewhere else later
+	}
+	profileTable("mbrId2") := {
+		"lowBalanceAlert" -> 700,
+		"highBalanceAlert" -> 500,
+		
+		"highVolumeAlert" -> 10000,
+		"capacity" -> 100000,
+		
+		"saleVolume" -> 50000 //might be place somewhere else later
+	}
+	profileTable("mbrId3") := {
+		"lowBalanceAlert" -> 1000,
+		"highBalanceAlert" -> 700,
+		
+		"highVolumeAlert" -> 10000,
+		"capacity" -> 100000,
+		
+		"saleVolume" -> 100000 //might be place somewhere else later
+	}
+	
+	
 	//init accounts
 	accountTable("accId1") := {
 		"AccountID" -> "accId1",
 		"accountType" -> "CC",
 		"MemberID" -> "mbrId1",
 		"unit" -> "SRD",
-		"balance" -> 10000,
+		//"balance" -> toNumber(-9800), //test low balance alert
+		//"balance" -> 19900, //test high balance alert
+		"balance" -> 8000,
 		"creditLimit" -> 10000,
 		"creditLimitDate" -> "",
 		"availableBalance" -> 20000,
@@ -44,8 +76,8 @@ rule InitData = {
 		"balance" -> 1000,
 		"creditLimit" -> 10000,
 		"creditLimitDate" -> "",
-		"availableBalance" -> 20000,
 		"upperLimit" -> 20000,
+		"availableBalance" -> 20000,		
 		"availableCapacity" -> 100000
 	}
 	

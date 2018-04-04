@@ -16,6 +16,7 @@ universe CHANNEL = { Service, POS }
 universe ACCOUNT_ID = {accId1, accId2}
 universe MEMBER_ID = {mbrId1, mbrId2}
 
+controlled profileTable: MEMBER_ID -> MAP
 controlled accountTable: ACCOUNT_ID -> MAP
 controlled userGroupTable: MEMBER_ID -> USER_TYPE_GROUP
 controlled TT: OPERATION * UNIT * USER_TYPE_GROUP -> SET
@@ -74,12 +75,30 @@ rule CreditPreviewReq(transfer, mbr) = local error in seqblock
 	SendStatus(transfer, error, mbr)
 endseqblock
 
+//check the balances
+//maybe derived function instead of returning rule
+rule BalanceCheck(amount, fromAccount, toAccount) = seqblock
+	result := true
+endseqblock
+
+//check alert limits
+derived CheckAccountLimitsAlerts(amount, profile, account) =
+	return alert in
+		if ((v(account, "creditLimit") + v(account, "balance")) < v(profile, "lowBalanceAlert")) then
+			alert := "LowBalanceAlert"
+		else if ((v(account, "upperLimit") - v(account, "balance")) < v(profile, "highBalanceAlert")) then
+			alert := "HighBalanceAlert"
+		else if ((v(profile, "capacity") - v(profile, "saleVolume")) < v(profile, "highVolumeAlert")) then
+			alert := "HighVolumeAlert"
+		else 
+			alert := undef
+			
 // check for a credit request
 // might be party separated for the debit check (similar requirements?)
 rule CreditPreviewCheck(transfer, mbr) =
 	local errormessage, tt, ac, amount, 
 				fromAccID, fromAccount, fromMbrId, fromGrpId, fromUnit, fromAccountType,
-				toAccID, toAccount, toMbrId, toGrpId, toUnit, toAccountType in
+				toAccID, toAccount, toMbrId, toGrpId, toUnit, toAccountType, limitAlert, hasCorrectBlance in
 seqblock
 	errormessage := undef
 	
@@ -126,29 +145,25 @@ seqblock
 		if (toGrpId memberof tt) then seqblock
 			print "---- group in TT ----"
 			
-			ac := accountConnectivity("credit", fromUnit, fromAccountType)
+			ac := accountConnectivity("credit", fromUnit, fromAccountType) 
 			print "AC -> " + ac
 			
 			//account connectivity test
 			if (toAccountType memberof ac) then
 				print "---- accounts connected ----"
-			else par
-				errormessage := "accounts not connected"				
-			endpar
+			else errormessage := "accounts not connected"
 		endseqblock
-		else par
-			errormessage := "group NOT in TT"
-		endpar
+		else errormessage := "group NOT in TT"
 	endseqblock
-	else par
-		errormessage := "Units mismatch"
-	endpar
+	else errormessage := "Units mismatch"
 	
 	if (errormessage = undef) then seqblock
 		amount := v(transfer, "amount")
 		print "transfer amount: " + amount
 		
-		//TODO: limits checks
+		limitAlert := CheckAccountLimitsAlerts(amount, profileTable(fromMbrId), accountTable(fromAccID))
+		print "Limit Alert: " + limitAlert
+		hasCorrectBlance <- BalanceCheck(amount, fromAccount, toAccount)
 	endseqblock
 	
 	result := errormessage
