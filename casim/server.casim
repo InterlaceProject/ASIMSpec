@@ -49,35 +49,42 @@ rule YouMayProceedWith(transfer, mbr) = {
 	send transfer to mbr with subject "ProceedMessage"
 }
 
-
+//send error status to member
+rule SendStatus(transfer, error, mbr) = {
+	if (error != undef) then seqblock
+		// send DoNotProceedMessage if error detected
+		NotPermitted(transfer, error, mbr)
+	endseqblock
+	else seqblock
+		// send ProceedMessage if no error occured
+		YouMayProceedWith(transfer, mbr)
+	endseqblock
+}
 //-----------------------------------------------------------------------------------------------------------
 //				begin CreditPreviewReq
 //-----------------------------------------------------------------------------------------------------------
 
-rule CreditPreviewReq(msg, mbr) = local error in seqblock
-	print mbr + " -> CreditPreviewReq received: " + msg
+rule CreditPreviewReq(transfer, mbr) = local error in seqblock
+	print mbr + " -> CreditPreviewReq received: " + transfer
 	
-	error <- CreditPreviewCheck(msg, mbr)
+	//do check the transfer
+	error <- CreditPreviewCheck(transfer, mbr)
 	
-	if (error != undef) then seqblock
-		// send DoNotProceedMessage if eror detected
-		NotPermitted(msg, error, mbr)
-	endseqblock
-	else seqblock
-		// send ProceedMessage if no eror occured
-		YouMayProceedWith(msg, mbr)
-	endseqblock
+	//communicate status
+	SendStatus(transfer, error, mbr)
 endseqblock
 
-rule CreditPreviewCheck(msg, mbr) =
-	local errormessage, tt, ac,
+// check for a credit request
+// might be party separated for the debit check (similar requirements?)
+rule CreditPreviewCheck(transfer, mbr) =
+	local errormessage, tt, ac, amount, 
 				fromAccID, fromAccount, fromMbrId, fromGrpId, fromUnit, fromAccountType,
 				toAccID, toAccount, toMbrId, toGrpId, toUnit, toAccountType in
 seqblock
 	errormessage := undef
 	
 	// read from properties
-	fromAccID := v(msg, "from")
+	fromAccID := v(transfer, "from")
 	print "fromAccID -> " + fromAccID
 	fromAccount := accountTable(fromAccID)
 	print "fromAccount -> " + fromAccount
@@ -91,7 +98,7 @@ seqblock
 	print "fromAccountType -> " + fromAccountType
 	
 	//read to properties
-	toAccID := v(msg, "to")
+	toAccID := v(transfer, "to")
 	print "toAccID -> " + toAccID
 	toAccount := accountTable(toAccID)
 	print "toAccount -> " + toAccount
@@ -104,6 +111,7 @@ seqblock
 	toAccountType := v(toAccount, "accountType")
 	print "toAccountType -> " + toAccountType
 	
+	//TODO: raise error on missing information
 	
 	// checks begin -------------------------------
 	
@@ -136,7 +144,12 @@ seqblock
 		errormessage := "Units mismatch"
 	endpar
 	
-	//TODO: limits checks
+	if (errormessage = undef) then seqblock
+		amount := v(transfer, "amount")
+		print "transfer amount: " + amount
+		
+		//TODO: limits checks
+	endseqblock
 	
 	result := errormessage
 endseqblock
@@ -144,21 +157,28 @@ endseqblock
 //-----------------------------------------------------------------------------------------------------------
 //				begin CreditPerformReq
 //-----------------------------------------------------------------------------------------------------------
-rule CreditPerformReq(msg, mbr) = {
-	print mbr + " -> CreditPerformReq received: " + msg
-}
+rule CreditPerformReq(transfer, mbr) = local error in seqblock
+	print mbr + " -> CreditPerformReq received: " + transfer
+	
+	//do check the transfer if still ok
+	error <- CreditPreviewCheck(transfer, mbr)
+	
+	//TODO: perform transfer
+	
+	print "error??: " + error	
+endseqblock
 //-----------------------------------------------------------------------------------------------------------
 //				begin DebitPreviewReq
 //-----------------------------------------------------------------------------------------------------------
-rule DebitPreviewReq(msg, mbr) = {
-	print mbr + " -> DebitPreviewReq received" + msg
+rule DebitPreviewReq(transfer, mbr) = {
+	print mbr + " -> DebitPreviewReq received" + transfer
 }
 
 //-----------------------------------------------------------------------------------------------------------
 //				begin DebitPerformReq
 //-----------------------------------------------------------------------------------------------------------
-rule DebitPerformReq(msg, mbr) = {
-	print mbr + " -> DebitPerformReq received" + msg
+rule DebitPerformReq(transfer, mbr) = {
+	print mbr + " -> DebitPerformReq received" + transfer
 }
 
 //-----------------------------------------------------------------------------------------------------------
@@ -169,13 +189,13 @@ rule Program = {
 		//fetch message data
 		msubject := getMessageSubject(m)
 		msgIn := getMessageContent(m)
-		mbr := getMessageSender(m)
+		member := getMessageSender(m)
 		
-    	if msgIn != undef and mbr != undef then seqblock
-    		if msubject = "CreditReviewRequest" then CreditPreviewReq(msgIn, mbr)
-    		if msubject = "CreditPerformReq" then CreditPerformReq(msgIn, mbr)
-    		if msubject = "DebitPreviewReq" then DebitPreviewReq(msgIn, mbr)
-    		if msubject = "DebitPerformReq" then DebitPerformReq(msgIn, mbr)
+    	if msgIn != undef and member != undef then seqblock
+    		if msubject = "CreditReviewRequest" then CreditPreviewReq(msgIn, member)
+    		if msubject = "CreditPerformReq" then CreditPerformReq(msgIn, member)
+    		if msubject = "DebitPreviewReq" then DebitPreviewReq(msgIn, member)
+    		if msubject = "DebitPerformReq" then DebitPerformReq(msgIn, member)
 		endseqblock
     endseqblock
 }

@@ -41,7 +41,7 @@ rule InitData = {
 		"accountType" -> "Income",
 		"MemberID" -> "mbrId2",
 		"unit" -> "EUR",
-		"balance" -> 10000,
+		"balance" -> 1000,
 		"creditLimit" -> 10000,
 		"creditLimitDate" -> "",
 		"availableBalance" -> 20000,
