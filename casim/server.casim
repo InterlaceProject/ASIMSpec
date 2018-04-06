@@ -82,6 +82,8 @@ rule BalanceCheck(amount, fromAccount, toAccount) = seqblock
 endseqblock
 
 //check alert limits
+//TODO: verify where the limits are actuall defined!!
+//TODO: include current involved amount?
 derived CheckAccountLimitsAlerts(amount, profile, account) =
 	return alert in
 		if ((v(account, "creditLimit") + v(account, "balance")) < v(profile, "lowBalanceAlert")) then
