@@ -10,6 +10,9 @@ scheduling NoPolicy
 policy NoPolicy = skip
 /*includeskip end*/
 
+controlled sent: BOOLEAN
+controlled cnt: INTEGER
+
 policy ClientSkip = skip
 
 rule InitClient = par
@@ -32,7 +35,7 @@ rule ProgramClient = local msgSubject, message, mbr in par
 	
 	//send initial request
 	if not sent then seq
-		print "sending CreditReviewRequest: " + sent
+		print "sending CreditReviewRequest: " + sent //+ ", " + cnt
 		sent := true
 		send CREDITREQUEST  to "server" with subject "CreditReviewRequest"
 		print "sending CreditReviewRequest: " + sent
@@ -74,5 +77,5 @@ rule ProgramClient = local msgSubject, message, mbr in par
 		done := true
 	endseqblock
 	
-	print "sent:: " + sent
+	print "sent:: " + sent + ", count:: " + cnt
 endpar
