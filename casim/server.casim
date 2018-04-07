@@ -40,27 +40,37 @@ derived v(amap, key) =
 	return ret in
 		choose v in amap with key = nth(v, 1) do ret := nth(v, 2)
 
-// not permitted message
-rule NotPermitted(transfer, error, mbr) = {
-	send error + " for transfer: " + transfer to mbr with subject "DoNotProceedMessage"
+derived messageContent(msg) =
+	return content in
+		content := nth(msg, 1)
+
+derived messageSubject(msg) =
+	return ms in
+		ms := nth(msg, 2)
+
+rule Send(msg, mbr) = {
+	send messageContent(msg) to mbr with subject messageSubject(msg)
 }
+
+// not permitted message
+derived NotPermitted(transfer, error) =
+	return message in
+		message := [error + " for transfer: " + transfer, "DoNotProceedMessage"]
 
 //prepare normal message
-rule YouMayProceedWith(transfer, mbr) = {
-	send transfer to mbr with subject "ProceedMessage"
-}
+derived YouMayProceedWith(transfer) =
+	return message in
+		message := [transfer, "ProceedMessage"]
 
-//send error status to member
-rule SendStatus(transfer, error, mbr) = {
-	if (error != undef) then seqblock
-		// send DoNotProceedMessage if error detected
-		NotPermitted(transfer, error, mbr)
-	endseqblock
-	else seqblock
-		// send ProceedMessage if no error occured
-		YouMayProceedWith(transfer, mbr)
-	endseqblock
-}
+//success message with optional limitAlert
+derived TransferPerformedSuccessfully(transfer, limitAlert) =
+	return message in
+		if limitAlert = undef then
+			message := [transfer + " performed successfully", "TransferPerformed"]
+		else
+			message := [transfer + " performed successfully with alert " + limitAlert,
+						"TransferPerformed"]
+
 //-----------------------------------------------------------------------------------------------------------
 //				begin CreditPreviewReq
 //-----------------------------------------------------------------------------------------------------------
@@ -72,7 +82,12 @@ rule CreditPreviewReq(transfer, mbr) = local error in seqblock
 	error <- CreditPreviewCheck(transfer, mbr)
 	
 	//communicate status
-	SendStatus(transfer, error, mbr)
+	if (error != undef) then seqblock
+		Send(NotPermitted(transfer, error), mbr)
+	endseqblock
+	else seqblock
+		Send(YouMayProceedWith(transfer), mbr)
+	endseqblock
 endseqblock
 
 //check the balances
@@ -195,7 +210,10 @@ local fromAccID, fromAccount, fromMbrId, fromProfile, toAccID,
 			limitAlert := CheckAccountLimitsAlerts(fromProfile, fromAccount)
 			print "Limit Alert: " + limitAlert
 			
-			//TODO: send limit alert if defined
+			//send success message, attach limitAlert if necessary
+			Send(TransferPerformedSuccessfully(transfer, limitAlert), mbr)
+			
+			skip
 		endseq
 		else NotPermitted(transfer, "Balance check problem: " + bC, mbr)
 	endseq	

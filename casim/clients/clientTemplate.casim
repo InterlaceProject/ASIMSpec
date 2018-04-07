@@ -10,16 +10,19 @@ scheduling NoPolicy
 policy NoPolicy = skip
 /*includeskip end*/
 
-controlled sent: BOOLEAN
+controlled requestSent: BOOLEAN
+controlled done: BOOLEAN
 controlled cnt: INTEGER
+controlled awaitmessage: INTEGER
+controlled CREDITREQUEST: MAP 
 
 policy ClientSkip = skip
 
 rule InitClient = par
 	//init variables
-	sent := false
+	requestSent := false
 	done := false
-	proceedmessage := false
+	awaitmessage := 2
 	cnt := 0
 	CREDITREQUEST := {
 					"from" -> "accId1",
@@ -34,15 +37,15 @@ rule ProgramClient = local msgSubject, message, mbr in par
 	cnt := cnt + 1
 	
 	//send initial request
-	if not sent then seq
-		print "sending CreditReviewRequest: " + sent
-		sent := true
+	if not requestSent then seq
+		print "sending CreditReviewRequest: " + requestSent
+		requestSent := true
 		send CREDITREQUEST  to "server" with subject "CreditReviewRequest"
-		print "sending CreditReviewRequest: " + sent
+		print "sending CreditReviewRequest: " + requestSent
 	endseq
 	else
 	// check for proceedmessage message
-	if sent and not proceedmessage and not done then seq
+	if requestSent and awaitmessage > 0 and not done then seq
 		forall m in inboxOf(self) do seq
 			//fetch message data
 			msgSubject := getMessageSubject(m)
@@ -56,19 +59,25 @@ rule ProgramClient = local msgSubject, message, mbr in par
 					//dummy skip - if left out, above send is not working
 					skip
 				endseq
-				else
+				else if msgSubject = "DoNotProceedMessage" then seq
 					print "cannot proceed with request: " + message
+					awaitmessage := 0
+				endseq
+				else if msgSubject = "TransferPerformed" then
+					print "DONE: " + message
+				else
+					print "unknown message: "+ message + ", stopped listenting"
 					
-				proceedmessage := true
+				awaitmessage := awaitmessage - 1
 			endseq
 			else
 				if cnt % 20 = 0 then
-					print "waiting for ProceedMessage..."			
+					print "waiting for message..."			
 		endseq
 	endseq
 	else
 	//send done message
-	if sent and proceedmessage and not done then seqblock
+	if requestSent and awaitmessage = 0 and not done then seqblock
 		print "sending done"
 		//"destroyASIM self" not working
 		//destroyASIM <name> would work but I don't know how to determine the name of the current ASIM
@@ -77,5 +86,5 @@ rule ProgramClient = local msgSubject, message, mbr in par
 		done := true
 	endseqblock
 	
-	print "sent:: " + sent + ", count:: " + cnt
+	print "sent:: " + requestSent + ", count:: " + cnt + ", awaitmessge: " + awaitmessage
 endpar
