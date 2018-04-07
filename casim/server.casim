@@ -164,7 +164,9 @@ endseqblock
 //				begin CreditPerformReq
 //-----------------------------------------------------------------------------------------------------------
 rule CreditPerformReq(transfer, mbr) = 
-local error, fromAccID, fromAccount, fromMbrId, fromProfile, limitAlert in seqblock
+local fromAccID, fromAccount, fromMbrId, fromProfile, toAccID,
+		 limitAlert, bC, amount, error in seq
+		 
 	print mbr + " -> CreditPerformReq received: " + transfer
 	
 	//do check the transfer if still ok
@@ -173,9 +175,13 @@ local error, fromAccID, fromAccount, fromMbrId, fromProfile, limitAlert in seqbl
 	if (error != undef) then
 		NotPermitted(transfer, error, mbr)
 	else seq
-		bC := balanceCheck(v(transfer, "from"), v(transfer, "to"), amount)
+		fromAccID := v(transfer, "from")
+		toAccID := v(transfer, "to")
+		amount := v(transfer, "amount")
 		
-		if bC = "OK" then seqblock
+		bC := balanceCheck(fromAccID, toAccID, amount)
+		
+		if bC = "OK" then seq
 			print "---- balance check passed: performing transfer ---"
 			
 			//TODO: perform transfer
@@ -189,11 +195,11 @@ local error, fromAccID, fromAccount, fromMbrId, fromProfile, limitAlert in seqbl
 			limitAlert := CheckAccountLimitsAlerts(fromProfile, fromAccount)
 			print "Limit Alert: " + limitAlert
 			
-			print "CreditPerformReq fromAccID: " + fromAccID
-		endseqblock
+			//TODO: send limit alert if defined
+		endseq
 		else NotPermitted(transfer, "Balance check problem: " + bC, mbr)
 	endseq	
-endseqblock
+endseq
 //-----------------------------------------------------------------------------------------------------------
 //				begin DebitPreviewReq
 //-----------------------------------------------------------------------------------------------------------
