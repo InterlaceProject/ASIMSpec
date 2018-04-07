@@ -31,14 +31,15 @@ rule ProgramClient = local msgSubject, message, mbr in par
 	cnt := cnt + 1
 	
 	//send initial request
-	if not sent then seqblock
+	if not sent then seq
 		print "sending CreditReviewRequest: " + sent
-		send CREDITREQUEST  to "server" with subject "CreditReviewRequest"
 		sent := true
-	endseqblock
+		send CREDITREQUEST  to "server" with subject "CreditReviewRequest"
+		print "sending CreditReviewRequest: " + sent
+	endseq
 	else
 	// check for proceedmessage message
-	if sent and not proceedmessage and not done then		
+	if sent and not proceedmessage and not done then seq
 		forall m in inboxOf(self) do seq
 			//fetch message data
 			msgSubject := getMessageSubject(m)
@@ -61,6 +62,7 @@ rule ProgramClient = local msgSubject, message, mbr in par
 				if cnt % 20 = 0 then
 					print "waiting for ProceedMessage..."			
 		endseq
+	endseq
 	else
 	//send done message
 	if sent and proceedmessage and not done then seqblock
@@ -71,4 +73,6 @@ rule ProgramClient = local msgSubject, message, mbr in par
 		send "Done" to "scheduler" with subject "Done"
 		done := true
 	endseqblock
+	
+	print "sent:: " + sent
 endpar

@@ -77,14 +77,14 @@ endseqblock
 
 //check the balances
 //maybe derived function instead of returning rule
-rule BalanceCheck(amount, fromAccount, toAccount) = seqblock
-	result := true
-endseqblock
+derived balanceCheck(fromAccount, toAccount, amount) =
+	return message in
+		message := "OK"
 
 //check alert limits
-//TODO: verify where the limits are actuall defined!!
-//TODO: include current involved amount?
-derived CheckAccountLimitsAlerts(amount, profile, account) =
+//  checked after current transfer has
+//  been performed on the ledger
+derived CheckAccountLimitsAlerts(profile, account) =
 	return alert in
 		if ((v(account, "creditLimit") + v(account, "balance")) < v(profile, "lowBalanceAlert")) then
 			alert := "LowBalanceAlert"
@@ -131,12 +131,10 @@ seqblock
 	print "toUnit -> " + toUnit
 	toAccountType := v(toAccount, "accountType")
 	print "toAccountType -> " + toAccountType
-	
 	//TODO: raise error on missing information
 	
 	// checks begin -------------------------------
-	
-	// same unit?
+	// unit check - optional
 	if (fromUnit = toUnit) then seqblock
 		print "---- units are equal ----"
 		
@@ -159,30 +157,42 @@ seqblock
 	endseqblock
 	else errormessage := "Units mismatch"
 	
-	if (errormessage = undef) then seqblock
-		amount := v(transfer, "amount")
-		print "transfer amount: " + amount
-		
-		limitAlert := CheckAccountLimitsAlerts(amount, profileTable(fromMbrId), accountTable(fromAccID))
-		print "Limit Alert: " + limitAlert
-		hasCorrectBlance <- BalanceCheck(amount, fromAccount, toAccount)
-	endseqblock
-	
 	result := errormessage
 endseqblock
 
 //-----------------------------------------------------------------------------------------------------------
 //				begin CreditPerformReq
 //-----------------------------------------------------------------------------------------------------------
-rule CreditPerformReq(transfer, mbr) = local error in seqblock
+rule CreditPerformReq(transfer, mbr) = 
+local error, fromAccID, fromAccount, fromMbrId, fromProfile, limitAlert in seqblock
 	print mbr + " -> CreditPerformReq received: " + transfer
 	
 	//do check the transfer if still ok
 	error <- CreditPreviewCheck(transfer, mbr)
-	
-	//TODO: perform transfer
-	
-	print "error??: " + error	
+
+	if (error != undef) then
+		NotPermitted(transfer, error, mbr)
+	else seq
+		bC := balanceCheck(v(transfer, "from"), v(transfer, "to"), amount)
+		
+		if bC = "OK" then seqblock
+			print "---- balance check passed: performing transfer ---"
+			
+			//TODO: perform transfer
+			
+			fromAccID := v(transfer, "from")
+			fromAccount := accountTable(fromAccID)
+			fromMbrId := v(fromAccount, "MemberID")
+			fromProfile := profileTable(fromMbrId)
+			print "CreditPerformReq: " + "from: " + fromAccID + ", fromMbrId: " + fromMbrId
+			
+			limitAlert := CheckAccountLimitsAlerts(fromProfile, fromAccount)
+			print "Limit Alert: " + limitAlert
+			
+			print "CreditPerformReq fromAccID: " + fromAccID
+		endseqblock
+		else NotPermitted(transfer, "Balance check problem: " + bC, mbr)
+	endseq	
 endseqblock
 //-----------------------------------------------------------------------------------------------------------
 //				begin DebitPreviewReq
@@ -203,6 +213,7 @@ rule DebitPerformReq(transfer, mbr) = {
 //-----------------------------------------------------------------------------------------------------------
 rule Program = {
 	forall m in inboxOf(self) do seqblock
+		print "message received"
 		//fetch message data
 		msubject := getMessageSubject(m)
 		msgIn := getMessageContent(m)

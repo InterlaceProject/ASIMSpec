@@ -8,7 +8,7 @@ policy NoPolicy = skip
 /*includeskip end*/
 
 
-rule InitData = {
+rule InitData = {	
 	//init profile data
 	profileTable("mbrId1") := {
 		"lowBalanceAlert" -> 700,
@@ -83,13 +83,12 @@ rule InitData = {
 	
 	//transfer groups
 	TT("credit", "SRD", "company") := {"company", "employee", "MNGR", "full"}
-	TT("credit", "SRD", "full") := TT("credit", "SRD", "company")
+	TT("credit", "SRD", "full") := {"company", "employee", "MNGR", "full"}
 	TT("credit", "SRD", "MNGR") := {"retail", "company", "employee", "MNGR", "full"}
 	TT("credit", "SRD", "employee") := {"retail", "company", "full"}
 	TT("credit", "SRD", "consumer_verified") := {"retail", "company", "full"}
 	
-	TT("debit", "SRD", "MNGR") := {"retail", "company", "MNGR", "full"}	
-	forall x in {"retail", "company", "full"} do TT("debit", "SRD", x) := x	
+	forall x in {"retail", "company", "full", "MNGR"} do TT("debit", "SRD", x) := x	
 	
 	forall x in {"retail", "full"} do TT("debit", "EUR", x) := x  
 	
