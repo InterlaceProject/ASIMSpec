@@ -5,7 +5,7 @@ use Standard
 init Start
 scheduling whileRunning
 
-controlled counter: INTEGER
+controlled counterScheduler: INTEGER
 
 // not yet clear how asim scheduling works
 policy whileRunning = {
@@ -14,16 +14,17 @@ policy whileRunning = {
 }
 
 rule Start = {
-	counter := 0
+	counterScheduler := 0
 	program(self) := Program
 }
 
 //-----------------------------------------------------------------------------------------------------------
 //				begin scheduler main programm
 //-----------------------------------------------------------------------------------------------------------
-rule Program = seq
+rule Program = local clientName, temploc in seq
 	//create new client on the 15th tick
-	if counter = 15 then seq
+	if counterScheduler = 15 then seq
+		//Client rules are defined in clientTemplate script
 		createASIM initializedBy InitClient withProgram ProgramClient andPolicy ClientSkip in temploc
 	endseq
 	
@@ -36,5 +37,5 @@ rule Program = seq
 		print "client removed: " + clientName
 	endseq
 	
-	counter := counter + 1
+	counterScheduler := counterScheduler + 1
 endseq

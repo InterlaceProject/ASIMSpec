@@ -10,7 +10,7 @@ scheduling NoPolicy
 policy NoPolicy = skip
 /*includeskip end*/
 
-controlled requestSent: BOOLEAN
+controlled initialRequestSent: BOOLEAN
 controlled done: BOOLEAN
 controlled cnt: INTEGER
 controlled awaitmessage: INTEGER
@@ -20,7 +20,7 @@ policy ClientSkip = skip
 
 rule InitClient = par
 	//init variables
-	requestSent := false
+	initialRequestSent := false
 	done := false
 	awaitmessage := 2
 	cnt := 0
@@ -33,19 +33,19 @@ rule InitClient = par
 				}
 endpar
 
-rule ProgramClient = local msgSubject, message, mbr in par
+rule ProgramClient = local msgSubject, message, mbr in seq
 	cnt := cnt + 1
 	
 	//send initial request
-	if not requestSent then seq
-		print "sending CreditReviewRequest: " + requestSent
-		requestSent := true
+	if not initialRequestSent then seq
+		print "sending CreditReviewRequest: " + initialRequestSent
+		initialRequestSent := true
 		send CREDITREQUEST  to "server" with subject "CreditReviewRequest"
-		print "sending CreditReviewRequest: " + requestSent
+		print "sending CreditReviewRequest: " + initialRequestSent
 	endseq
 	else
 	// check for proceedmessage message
-	if requestSent and awaitmessage > 0 and not done then seq
+	if initialRequestSent and awaitmessage > 0 and not done then seq
 		forall m in inboxOf(self) do seq
 			//fetch message data
 			msgSubject := getMessageSubject(m)
@@ -77,7 +77,7 @@ rule ProgramClient = local msgSubject, message, mbr in par
 	endseq
 	else
 	//send done message
-	if requestSent and awaitmessage = 0 and not done then seqblock
+	if initialRequestSent and awaitmessage = 0 and not done then seqblock
 		print "sending done"
 		//"destroyASIM self" not working
 		//destroyASIM <name> would work but I don't know how to determine the name of the current ASIM
@@ -86,5 +86,5 @@ rule ProgramClient = local msgSubject, message, mbr in par
 		done := true
 	endseqblock
 	
-	print "sent:: " + requestSent + ", count:: " + cnt + ", awaitmessge: " + awaitmessage
-endpar
+	print "sent:: " + initialRequestSent + ", count:: " + cnt + ", awaitmessge: " + awaitmessage
+endseq	
