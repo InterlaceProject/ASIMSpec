@@ -92,9 +92,26 @@ endseqblock
 
 //check the balances
 //maybe derived function instead of returning rule
+//amount condition check missing (D2.1)
 derived balanceCheck(fromAccount, toAccount, amount) =
 	return message in
-		message := "OK"
+		if availableBalance(fromAccount) >= amount  and Receivable(amount, toAccount) then
+			message := "OK"
+		else if availableBalance(fromAccount) < amount then
+			message := "ViolatesLowerLimit"
+		else if not Receivale(amount, toAccount) then
+			message := "ViolatesUpperLimit"
+		else //what todo in that case
+			message := "UnknownState"
+
+// reveivable for to account
+derived Receivable(amt, acc) =
+	return pass in
+		pass := ((v(acc, "balance") + amt) <= v(acc, "upperLimit"))
+
+derived availableBalance(fromAccount) =
+	return availBal in
+		availBal := v(fromAccount, "balance") + v(fromAccount, "creditLimit")
 
 //check alert limits
 //  checked after current transfer has
@@ -146,6 +163,7 @@ seqblock
 	print "toUnit -> " + toUnit
 	toAccountType := v(toAccount, "accountType")
 	print "toAccountType -> " + toAccountType
+	
 	//TODO: raise error on missing information
 	
 	// checks begin -------------------------------
@@ -194,7 +212,7 @@ local fromAccID, fromAccount, fromMbrId, fromProfile, toAccID,
 		toAccID := v(transfer, "to")
 		amount := v(transfer, "amount")
 		
-		bC := balanceCheck(fromAccID, toAccID, amount)
+		bC := balanceCheck(accountTable(fromAccID), accountTable(toAccID), amount)
 		
 		if bC = "OK" then seq
 			print "---- balance check passed: performing transfer ---"
