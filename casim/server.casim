@@ -104,14 +104,15 @@ derived balanceCheck(fromAccount, toAccount, amount) =
 		else //what todo in that case
 			message := "UnknownState"
 
-// reveivable for to account
+// reveivable for to-account
 derived Receivable(amt, acc) =
 	return pass in
 		pass := ((v(acc, "balance") + amt) <= v(acc, "upperLimit"))
 
-derived availableBalance(fromAccount) =
+// calualte avaiable balance by using the account
+derived availableBalance(account) =
 	return availBal in
-		availBal := v(fromAccount, "balance") + v(fromAccount, "creditLimit")
+		availBal := v(account, "balance") + v(account, "creditLimit")
 
 //check alert limits
 //  checked after current transfer has
