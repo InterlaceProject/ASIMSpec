@@ -10,9 +10,10 @@ scheduling NoPolicy
 policy NoPolicy = skip
 /*includeskip end*/
 
+
 controlled initialRequestSent: BOOLEAN
 controlled done: BOOLEAN
-controlled cnt: INTEGER
+controlled countTemplate: INTEGER
 controlled awaitmessage: INTEGER
 controlled CREDITREQUEST: MAP 
 
@@ -23,7 +24,7 @@ rule InitClient = par
 	initialRequestSent := false
 	done := false
 	awaitmessage := 2
-	cnt := 0
+	countTemplate := 0
 	CREDITREQUEST := {
 					"from" -> "accId1",
 					"to" -> "accId2",
@@ -34,7 +35,7 @@ rule InitClient = par
 endpar
 
 rule ProgramClient = local msgSubject, message, mbr in seq
-	cnt := cnt + 1
+	countTemplate := countTemplate + 1
 	
 	//send initial request
 	if not initialRequestSent then seq
@@ -71,7 +72,7 @@ rule ProgramClient = local msgSubject, message, mbr in seq
 				awaitmessage := awaitmessage - 1
 			endseq
 			else
-				if cnt % 20 = 0 then
+				if countTemplate % 20 = 0 then
 					print "waiting for message..."			
 		endseq
 	endseq
@@ -86,5 +87,5 @@ rule ProgramClient = local msgSubject, message, mbr in seq
 		done := true
 	endseqblock
 	
-	print "sent:: " + initialRequestSent + ", count:: " + cnt + ", awaitmessge: " + awaitmessage
+	print "sent:: " + initialRequestSent + ", count:: " + countTemplate + ", awaitmessge: " + awaitmessage
 endseq	
