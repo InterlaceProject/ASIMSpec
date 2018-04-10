@@ -34,10 +34,9 @@ rule InitClient = par
 				}
 endpar
 
-rule ProgramClient = local msgSubject, message, mbr in par
-	
+rule ProgramClient = local msgSubject, message, mbr in par	
 	countTemplate := countTemplate + 1
-	
+
 	//send initial request
 	if not initialRequestSent then par
 		//print "sending CreditReviewRequest initialRequestSent: " + initialRequestSent
@@ -87,6 +86,6 @@ rule ProgramClient = local msgSubject, message, mbr in par
 		send "Done" to "scheduler" with subject "Done"
 		done := true
 	endpar
-	
-	//print "initialRequestSent:: " + initialRequestSent + ", countTemplate:: " + countTemplate + ", awaitmessge: " + awaitmessage
+
+	print "initialRequestSent:: " + initialRequestSent + ", countTemplate:: " + countTemplate + ", awaitmessge: " + awaitmessage
 endpar
