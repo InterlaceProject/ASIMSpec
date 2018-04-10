@@ -33,10 +33,10 @@ rule ProgramClient = local msgSubject, message, mbr in seq
 	
 	//send initial request
 	if not initialRequestSent then seq
-		print "sending CreditReviewRequest: " + initialRequestSent
+		print "sending CreditReviewRequest initialRequestSent: " + initialRequestSent
 		initialRequestSent := true
 		send CREDITREQUEST  to "server" with subject "CreditReviewRequest"
-		print "sending CreditReviewRequest: " + initialRequestSent
+		print "sending CreditReviewRequest initialRequestSent: " + initialRequestSent
 	endseq
 	else
 	// check for proceedmessage message
@@ -80,6 +80,8 @@ rule ProgramClient = local msgSubject, message, mbr in seq
 		send "Done" to "scheduler" with subject "Done"
 		done := true
 	endseqblock
-	
-	print "sent:: " + initialRequestSent + ", count:: " + countTemplate + ", awaitmessge: " + awaitmessage
-endseq	
+	if (not initialRequestSent or awaitmessage > 0) then
+		print "initialRequestSent:: " + initialRequestSent + 
+				", countTemplate:: " + countTemplate + 
+				", awaitmessge:: " + awaitmessage
+endseq
