@@ -34,19 +34,20 @@ rule InitClient = par
 				}
 endpar
 
-rule ProgramClient = local msgSubject, message, mbr in seq
+rule ProgramClient = local msgSubject, message, mbr in par
+	
 	countTemplate := countTemplate + 1
 	
 	//send initial request
-	if not initialRequestSent then seq
-		print "sending CreditReviewRequest: " + initialRequestSent
+	if not initialRequestSent then par
+		//print "sending CreditReviewRequest initialRequestSent: " + initialRequestSent
 		initialRequestSent := true
 		send CREDITREQUEST  to "server" with subject "CreditReviewRequest"
-		print "sending CreditReviewRequest: " + initialRequestSent
-	endseq
+		//print "sending CreditReviewRequest initialRequestSent: " + initialRequestSent
+	endpar
 	else
 	// check for proceedmessage message
-	if initialRequestSent and awaitmessage > 0 and not done then seq
+	if initialRequestSent and awaitmessage > 0 and not done then par
 		forall m in inboxOf(self) do seq
 			//fetch message data
 			msgSubject := getMessageSubject(m)
@@ -75,17 +76,17 @@ rule ProgramClient = local msgSubject, message, mbr in seq
 				if countTemplate % 20 = 0 then
 					print "waiting for message..."			
 		endseq
-	endseq
+	endpar
 	else
 	//send done message
-	if initialRequestSent and awaitmessage = 0 and not done then seqblock
+	if initialRequestSent and awaitmessage = 0 and not done then par
 		print "sending done"
 		//"destroyASIM self" not working
 		//destroyASIM <name> would work but I don't know how to determine the name of the current ASIM
 		//=> send done message to scheduler which ends the asim by retrieving the sender name
 		send "Done" to "scheduler" with subject "Done"
 		done := true
-	endseqblock
+	endpar
 	
-	print "sent:: " + initialRequestSent + ", count:: " + countTemplate + ", awaitmessge: " + awaitmessage
-endseq	
+	//print "initialRequestSent:: " + initialRequestSent + ", countTemplate:: " + countTemplate + ", awaitmessge: " + awaitmessage
+endpar

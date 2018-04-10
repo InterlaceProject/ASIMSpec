@@ -75,20 +75,20 @@ derived TransferPerformedSuccessfully(transfer, limitAlert) =
 //				begin CreditPreviewReq
 //-----------------------------------------------------------------------------------------------------------
 
-rule CreditPreviewReq(transfer, mbr) = local error in seqblock
+rule CreditPreviewReq(transfer, mbr) = local error in seq
 	print mbr + " -> CreditPreviewReq received: " + transfer
 	
 	//do check the transfer
 	error <- CreditPreviewCheck(transfer, mbr)
 	
 	//communicate status
-	if (error != undef) then seqblock
+	if (error != undef) then seq
 		Send(NotPermitted(transfer, error), mbr)
-	endseqblock
-	else seqblock
+	endseq
+	else seq
 		Send(YouMayProceedWith(transfer), mbr)
-	endseqblock
-endseqblock
+	endseq
+endseq
 
 //check the balances
 //maybe derived function instead of returning rule
@@ -99,7 +99,7 @@ derived balanceCheck(fromAccount, toAccount, amount) =
 			message := "OK"
 		else if availableBalance(fromAccount) < amount then
 			message := "ViolatesLowerLimit"
-		else if not Receivale(amount, toAccount) then
+		else if not Receivable(amount, toAccount) then
 			message := "ViolatesUpperLimit"
 		else //what todo in that case
 			message := "UnknownState"
@@ -134,7 +134,7 @@ rule CreditPreviewCheck(transfer, mbr) =
 	local errormessage, tt, ac, amount, 
 				fromAccID, fromAccount, fromMbrId, fromGrpId, fromUnit, fromAccountType,
 				toAccID, toAccount, toMbrId, toGrpId, toUnit, toAccountType, limitAlert, hasCorrectBlance in
-seqblock
+seq
 	errormessage := undef
 	
 	// read from properties
@@ -169,14 +169,14 @@ seqblock
 	
 	// checks begin -------------------------------
 	// unit check - optional
-	if (fromUnit = toUnit) then seqblock
+	if (fromUnit = toUnit) then seq
 		print "---- units are equal ----"
 		
 		tt := TT("credit", fromUnit, fromGrpId)
 		print "TT -> " + tt
 		
 		//TT check
-		if (toGrpId memberof tt) then seqblock
+		if (toGrpId memberof tt) then seq
 			print "---- group in TT ----"
 			
 			ac := accountConnectivity("credit", fromUnit, fromAccountType) 
@@ -186,13 +186,13 @@ seqblock
 			if (toAccountType memberof ac) then
 				print "---- accounts connected ----"
 			else errormessage := "accounts not connected"
-		endseqblock
+		endseq
 		else errormessage := "group NOT in TT"
-	endseqblock
+	endseq
 	else errormessage := "Units mismatch"
 	
 	result := errormessage
-endseqblock
+endseq
 
 //-----------------------------------------------------------------------------------------------------------
 //				begin CreditPerformReq
@@ -255,18 +255,18 @@ rule DebitPerformReq(transfer, mbr) = {
 //				begin main programm
 //-----------------------------------------------------------------------------------------------------------
 rule Program = {
-	forall m in inboxOf(self) do seqblock
+	forall m in inboxOf(self) do seq
 		print "message received"
 		//fetch message data
 		msubject := getMessageSubject(m)
 		msgIn := getMessageContent(m)
 		member := getMessageSender(m)
 		
-    	if msgIn != undef and member != undef then seqblock
+    	if msgIn != undef and member != undef then seq
     		if msubject = "CreditReviewRequest" then CreditPreviewReq(msgIn, member)
     		if msubject = "CreditPerformReq" then CreditPerformReq(msgIn, member)
     		if msubject = "DebitPreviewReq" then DebitPreviewReq(msgIn, member)
     		if msubject = "DebitPerformReq" then DebitPerformReq(msgIn, member)
-		endseqblock
-    endseqblock
+		endseq
+    endseq
 }
