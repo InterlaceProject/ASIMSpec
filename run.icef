@@ -9,9 +9,6 @@
    "asims" : [       
        {
            "file" : "casim/server.casim",
-           "include" : [
-	       		"casim/initdata.casim"
-	       ],
            "start" : "true"
        },
        {

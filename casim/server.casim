@@ -270,3 +270,102 @@ rule Program = {
 		endseqblock
     endseqblock
 }
+
+
+
+
+
+rule InitData = {	
+	//init profile data
+	profileTable("mbrId1") := {
+		"lowBalanceAlert" -> 700,
+		"highBalanceAlert" -> 1000,		
+		"highVolumeAlert" -> 10000,
+		"capacity" -> 100000,
+		//"saleVolume" -> 100000 //high volumn alert
+		"saleVolume" -> 50000 //might be place somewhere else later
+	}
+	profileTable("mbrId2") := {
+		"lowBalanceAlert" -> 700,
+		"highBalanceAlert" -> 500,		
+		"highVolumeAlert" -> 10000,
+		"capacity" -> 100000,		
+		"saleVolume" -> 50000 //might be place somewhere else later
+	}
+	profileTable("mbrId3") := {
+		"lowBalanceAlert" -> 1000,
+		"highBalanceAlert" -> 700,
+		"highVolumeAlert" -> 10000,
+		"capacity" -> 100000,		
+		"saleVolume" -> 100000 //might be place somewhere else later
+	}
+	
+	
+	//init accounts
+	accountTable("accId1") := {
+		"AccountID" -> "accId1",
+		"accountType" -> "CC",
+		"MemberID" -> "mbrId1",
+		"unit" -> "SRD",
+		//"balance" -> toNumber(-9800), //test low balance alert
+		//"balance" -> 19900, //test high balance alert
+		"balance" -> 8000,
+		"creditLimit" -> 10000,
+		"creditLimitDate" -> "",
+		//"availableBalance" -> 20000, //calculated: balance + creditLimit
+		"upperLimit" -> 20000
+		//"availableCapacity" -> 100000 //calculated: capacity - salevoulume
+	}
+	
+	accountTable("accId2") := {
+		"AccountID" -> "accId2",
+		"accountType" -> "CC",
+		"MemberID" -> "mbrId2",
+		"unit" -> "SRD",
+		"balance" -> 10000,
+		"creditLimit" -> 10000,
+		"creditLimitDate" -> "",
+		//"availableBalance" -> 20000, //calculated: balance + creditLimit
+		"upperLimit" -> 20000
+		//"availableCapacity" -> 100000 //calculated: capacity - salevoulume
+	}
+	
+	accountTable("accId3") := {
+		"AccountID" -> "accId3",
+		"MemberID" -> "mbrId2",
+		"accountType" -> "Income",
+		"unit" -> "EUR",
+		"balance" -> 1000
+		// not defined for "Income" account
+		//"creditLimit" -> 10000,
+		//"creditLimitDate" -> "",
+		//"upperLimit" -> 20000,
+		//"availableBalance" -> 20000, //calculated: balance + creditLimit		
+		//"availableCapacity" -> 100000
+	}
+	
+	//init user groups
+	userGroupTable("mbrId1") := "company"
+	userGroupTable("mbrId2") := "company"
+	
+	//transfer groups
+	TT("credit", "SRD", "company") := {"company", "employee", "MNGR", "full"}
+	TT("credit", "SRD", "full") := {"company", "employee", "MNGR", "full"}
+	TT("credit", "SRD", "MNGR") := {"retail", "company", "employee", "MNGR", "full"}
+	TT("credit", "SRD", "employee") := {"retail", "company", "full"}
+	TT("credit", "SRD", "consumer_verified") := {"retail", "company", "full"}
+	
+	forall x in {"retail", "company", "full", "MNGR"} do TT("debit", "SRD", x) := x	
+	
+	forall x in {"retail", "full"} do TT("debit", "EUR", x) := x  
+	
+	//account connectivity (Test 2, D3.1)
+	//only for user-initiated request, does not include system-initiated requests
+	accountConnectivity("credit", "SRD", "CC") := {"CC", "DOMU", "MIRROR"}
+	accountConnectivity("credit", "SRD", "DOMU") := {"CC"}
+	accountConnectivity("credit", "SRD", "MIRROR") := {"CC"}
+	
+	accountConnectivity("debit", "SRD", "CC") := {"CC"}
+	
+	accountConnectivity("debit", "EUR", "Income") := {"Bisoo"}
+}
