@@ -3,9 +3,6 @@
    "schedulers" : [
        {
 		   "file" : "casim/scheduler.casim",
-	       "include" : [
-	       		"casim/clients/clientTemplate.casim"
-	       ],
 		   "start" : "true"
        }
    ], 
@@ -16,7 +13,10 @@
 	       		"casim/initdata.casim"
 	       ],
            "start" : "true"
+       },
+       {
+           "file" : "casim/clients/staticclienttest.casim",
+           "start" : "true"
        }
-       
    ]
 }

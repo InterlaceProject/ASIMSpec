@@ -22,20 +22,25 @@ rule Start = {
 //				begin scheduler main programm
 //-----------------------------------------------------------------------------------------------------------
 rule Program = local clientName, temploc in seq
+	/*
 	//create new client on the 15th tick
 	if counterScheduler = 15 then seq
 		//Client rules are defined in clientTemplate script
 		createASIM initializedBy InitClient withProgram ProgramClient andPolicy ClientSkip in temploc
 	endseq
-	
+	*/
 	//look into inbox if a client has been sent its message and could be destroyed
 	choose m in inboxOf(self) with getMessageSubject(m)="Done" do seq
 		clientName := getMessageSender(m)
+		print clientName + " has sent Done message"
+		/*
 		destroyASIM clientName
 		temploc := undef
 		print "--------------------------------------------------------------------------"
 		print "client removed: " + clientName
+		*/
 	endseq
+	
 	
 	counterScheduler := counterScheduler + 1
 endseq

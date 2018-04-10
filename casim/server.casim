@@ -99,7 +99,7 @@ derived balanceCheck(fromAccount, toAccount, amount) =
 			message := "OK"
 		else if availableBalance(fromAccount) < amount then
 			message := "ViolatesLowerLimit"
-		else if not Receivale(amount, toAccount) then
+		else if not Receivable(amount, toAccount) then
 			message := "ViolatesUpperLimit"
 		else //what todo in that case
 			message := "UnknownState"

@@ -1,0 +1,85 @@
+CoreASIM staticcliettest
+
+use Standard 
+init InitClient
+scheduling ClientSkip
+policy ClientSkip = skip
+
+controlled initialRequestSent: BOOLEAN
+controlled done: BOOLEAN
+controlled countTemplate: INTEGER
+controlled awaitmessage: INTEGER
+controlled CREDITREQUEST: MAP 
+
+rule InitClient = par
+	//init variables
+	initialRequestSent := false
+	done := false
+	awaitmessage := 2
+	countTemplate := 0
+	CREDITREQUEST := {
+					"from" -> "accId1",
+					"to" -> "accId2",
+					"channel" -> "Service",
+					"amount"  -> 2000,
+					"metadata" -> {"message", "some transfer"}
+				}
+	
+	program(self) := ProgramClient
+endpar
+
+rule ProgramClient = local msgSubject, message, mbr in seq
+	countTemplate := countTemplate + 1
+	
+	//send initial request
+	if not initialRequestSent then seq
+		print "sending CreditReviewRequest: " + initialRequestSent
+		initialRequestSent := true
+		send CREDITREQUEST  to "server" with subject "CreditReviewRequest"
+		print "sending CreditReviewRequest: " + initialRequestSent
+	endseq
+	else
+	// check for proceedmessage message
+	if initialRequestSent and awaitmessage > 0 and not done then seq
+		forall m in inboxOf(self) do seq
+			//fetch message data
+			msgSubject := getMessageSubject(m)
+			message := getMessageContent(m) //maybe contains some kind of signature in production
+			mbr := getMessageSender(m)
+			
+			if (mbr = "server@server") then seq
+				if msgSubject = "ProceedMessage" then seq
+					print "sending message CreditPerformReq to server"
+					send CREDITREQUEST  to "server" with subject "CreditPerformReq"
+					//dummy skip - if left out, above send is not working
+					skip
+				endseq
+				else if msgSubject = "DoNotProceedMessage" then seq
+					print "cannot proceed with request: " + message
+					awaitmessage := 0
+				endseq
+				else if msgSubject = "TransferPerformed" then
+					print "DONE: " + message
+				else
+					print "unknown message: "+ message + ", stopped listenting"
+					
+				awaitmessage := awaitmessage - 1
+			endseq
+			else
+				if countTemplate % 20 = 0 then
+					print "waiting for message..."			
+		endseq
+	endseq
+	else
+	//send done message
+	if initialRequestSent and awaitmessage = 0 and not done then seqblock
+		print "sending done"
+		//"destroyASIM self" not working
+		//destroyASIM <name> would work but I don't know how to determine the name of the current ASIM
+		//=> send done message to scheduler which ends the asim by retrieving the sender name
+		send "Done" to "scheduler" with subject "Done"
+		done := true
+	endseqblock
+	
+	print "sent:: " + initialRequestSent + ", count:: " + countTemplate + ", awaitmessge: " + awaitmessage
+endseq	
