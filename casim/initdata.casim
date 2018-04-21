@@ -7,7 +7,6 @@ scheduling NoPolicy
 policy NoPolicy = skip
 /*includeskip end*/
 
-
 rule InitData = {	
 	//init profile data
 	profileTable("mbrId1") := {

@@ -13,8 +13,8 @@ universe UNIT = {SRD, EUR}
 universe USER_TYPE_GROUP = { welcome, retail, company, full, employee, on_hold, MNGR, consumer, consumer_verified }
 universe CHANNEL = { Service, POS }
 
-universe ACCOUNT_ID = {accId1, accId2}
-universe MEMBER_ID = {mbrId1, mbrId2}
+universe ACCOUNT_ID = {accId1, accId2, accId3}
+universe MEMBER_ID = {mbrId1, mbrId2, mbrId3}
 
 controlled profileTable: MEMBER_ID -> MAP
 controlled accountTable: ACCOUNT_ID -> MAP
@@ -38,7 +38,10 @@ rule Start = {
 //read value from a map (amap) identified by a key
 derived v(amap, key) =
 	return ret in
-		choose v in amap with key = nth(v, 1) do ret := nth(v, 2)
+		if amap = undef then
+			ret := undef
+		else
+			choose v in amap with key = nth(v, 1) do ret := nth(v, 2)
 
 derived messageContent(msg) =
 	return content in
