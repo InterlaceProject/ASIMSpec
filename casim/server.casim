@@ -27,11 +27,12 @@ controlled accountConnectivity: OPERATION * UNIT * ACCOUNT_TYPES -> SET
 //-----------------------------------------------------------------------------------------------------------
 //				begin tiny logger (because debug logger of ASM-Plugin is laborious to use)
 //-----------------------------------------------------------------------------------------------------------
-universe LOG_LEVEL = {FATAL, ERROR, WARN, INFO, DEBUG}
-controlled current_log_level: LOG_LEVEL
-controlled log_states: SET  //list of states which to log
+universe LOG_LEVEL = {FATAL, ERROR, WARN, INFO, DEBUG} //all log levels
+controlled current_log_level: LOG_LEVEL //current log leve
+controlled log_states: SET  //list of states which should be written to the log
 
 rule initCustomLogger(set_log_level) = seq
+	//TODO: add log to file option?
 	current_log_level := set_log_level
 	log_states := {FATAL}
 	
@@ -119,11 +120,12 @@ rule CreditPreviewReq(transfer, mbr) = local error in seq
 	error <- CreditPreviewCheck(transfer, mbr)
 	
 	//communicate status
-	if (error != undef) then seq
-		Send(NotPermitted(transfer, error), mbr)
-	endseq
-	else seq
+	//if seq block is removed send is not perfomred
+	if (error = undef) then seq
 		Send(YouMayProceedWith(transfer), mbr)
+	endseq 
+	else seq
+		Send(NotPermitted(transfer, error), mbr)
 	endseq
 endseq
 
