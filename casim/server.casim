@@ -55,7 +55,6 @@ rule do_log(text, level) = local write_log in seq
 		print level + ": " + text
 endseq
 
-
 //-----------------------------------------------------------------------------------------------------------
 //				begin globally used rules
 //-----------------------------------------------------------------------------------------------------------
@@ -65,6 +64,7 @@ rule Start = {
 	//defined in initaccounts.casim
 	InitData()
 	
+	//initalize logger
 	initCustomLogger(DEBUG)
 	
 	program(self) := Program
@@ -120,7 +120,7 @@ rule CreditPreviewReq(transfer, mbr) = local error in seq
 	error <- CreditPreviewCheck(transfer, mbr)
 	
 	//communicate status
-	//if seq block is removed send is not perfomred
+	//if seq block is removed send is not performed
 	if (error = undef) then seq
 		Send(YouMayProceedWith(transfer), mbr)
 	endseq 
@@ -143,24 +143,39 @@ derived balanceCheck(fromAccount, toAccount, amount) =
 		else //what todo in that case
 			message := "UnknownState"
 
-// reveivable for to-account
+//receivable for to-account
 derived Receivable(amt, acc) =
 	return pass in
-		pass := ((v(acc, "balance") + amt) <= v(acc, "upperLimit"))
+		pass := ((balance(acc) + amt) <= upperLimit(acc))
 
-// calualte avaiable balance by using the account
+//get balance for account	
+derived balance(acc) =
+	return bal in
+		bal := v(acc, "balance")
+		
+//get account upper limit
+derived upperLimit(acc) =
+	return ul in
+		ul := v(acc, "upperLimit")
+		
+//get credit limit
+derived creditLimit(acc) =
+	return cl in
+		cl :=  v(acc, "creditLimit")
+
+//calualte avaiable balance by using the account
 derived availableBalance(account) =
 	return availBal in
-		availBal := v(account, "balance") + v(account, "creditLimit")
+		availBal := balance(account) + creditLimit(account)
 
 //check alert limits
 //  checked after current transfer has
 //  been performed on the ledger
 derived CheckAccountLimitsAlerts(profile, account) =
 	return alert in
-		if ((v(account, "creditLimit") + v(account, "balance")) < v(profile, "lowBalanceAlert")) then
+		if ((creditLimit(account) + balance(account)) < v(profile, "lowBalanceAlert")) then
 			alert := "LowBalanceAlert"
-		else if ((v(account, "upperLimit") - v(account, "balance")) < v(profile, "highBalanceAlert")) then
+		else if ((upperLimit(account) - balance(account)) < v(profile, "highBalanceAlert")) then
 			alert := "HighBalanceAlert"
 		else if ((v(profile, "capacity") - v(profile, "saleVolume")) < v(profile, "highVolumeAlert")) then
 			alert := "HighVolumeAlert"
@@ -177,6 +192,8 @@ seq
 	errormessage := undef
 	
 	// read from properties
+	// TODO: create dervied functions for call of
+	//       type v(transfer, "from"), e.g. fromAcc(transfer) 
 	fromAccID := v(transfer, "from")
 	do_log("fromAccID -> " + fromAccID, DEBUG)
 	fromAccount := accountTable(fromAccID)
@@ -255,7 +272,7 @@ local fromAccID, fromAccount, fromMbrId, fromProfile, toAccID,
 		bC := balanceCheck(accountTable(fromAccID), accountTable(toAccID), amount)
 		
 		if bC = "OK" then seq
-			do_log("---- balance check passed: performing transfer ---", DEBUG)
+			do_log("balance check passed: performing transfer.", INFO)
 			
 			//TODO: perform transfer
 			
@@ -267,9 +284,9 @@ local fromAccID, fromAccount, fromMbrId, fromProfile, toAccID,
 			
 			limitAlert := CheckAccountLimitsAlerts(fromProfile, fromAccount)
 			if (limitAlert = undef) then
-				do_log("Limit Alert is undefined", DEBUG)
+				do_log("No limit alert", DEBUG)
 			else
-				do_log("Limit Alert: " + limitAlert, WARN)
+				do_log("Limit alert: " + limitAlert, WARN)
 			
 			//send success message, attach limitAlert if necessary
 			Send(TransferPerformedSuccessfully(transfer, limitAlert), mbr)
@@ -299,11 +316,13 @@ rule DebitPerformReq(transfer, mbr) = {
 rule Program = {
 	forall m in inboxOf(self) do seq
 		do_log("message received", DEBUG)
-		//fetch message data
+		
+		//fetch message information
 		msubject := getMessageSubject(m)
 		msgIn := getMessageContent(m)
 		member := getMessageSender(m)
 		
+		//dispatch messages
     	if msgIn != undef and member != undef then seq
     		if msubject = "CreditReviewRequest" then CreditPreviewReq(msgIn, member)
     		if msubject = "CreditPerformReq" then CreditPerformReq(msgIn, member)

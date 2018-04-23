@@ -13,7 +13,6 @@ policy NoPolicy = skip
 
 controlled initialRequestSent: BOOLEAN
 controlled done: BOOLEAN
-controlled countTemplate: INTEGER
 controlled awaitmessage: INTEGER
 controlled CREDITREQUEST: MAP 
 
@@ -24,7 +23,6 @@ rule InitClient = par
 	initialRequestSent := false
 	done := false
 	awaitmessage := 2
-	countTemplate := 0
 	CREDITREQUEST := {
 					"from" -> "accId1",
 					"to" -> "accId2",
@@ -35,8 +33,6 @@ rule InitClient = par
 endpar
 
 rule ProgramClient = local msgSubject, message, mbr in par	
-	countTemplate := countTemplate + 1
-
 	//send initial request
 	if not initialRequestSent then par
 		//print "sending CreditReviewRequest initialRequestSent: " + initialRequestSent
@@ -72,7 +68,7 @@ rule ProgramClient = local msgSubject, message, mbr in par
 				awaitmessage := awaitmessage - 1
 			endseq
 			else
-				if countTemplate % 20 = 0 then
+				if stepcount % 20 = 0 then
 					print "waiting for message..."			
 		endseq
 	endpar
@@ -86,6 +82,6 @@ rule ProgramClient = local msgSubject, message, mbr in par
 		send "Done" to "scheduler" with subject "Done"
 		done := true
 	endpar
-
-	print "initialRequestSent:: " + initialRequestSent + ", countTemplate:: " + countTemplate + ", awaitmessge: " + awaitmessage
+	
+	print "initialRequestSent:: " + initialRequestSent + ", stepcount:: " + stepcount + ", awaitmessge: " + awaitmessage
 endpar
