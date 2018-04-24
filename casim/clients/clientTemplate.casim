@@ -1,8 +1,5 @@
 /*includeskip begin*/
 CoreASIM clientTemplate
-
-use Standard
-
 use Standard 
 init dummy
 rule dummy = skip
@@ -12,10 +9,10 @@ policy NoPolicy = skip
 
 
 // ------------------------------- !!important!! -------------------------------
-// global definitions are NOT used when instantiating a client "dynamically"
-// because "createASIM" function only allow to provide init, program and policy
-// thus globally used variables are defined by their first usage
-// just here to avoid warnings
+// Global definitions are NOT used when instantiating a client "dynamically"
+// because "createASIM" function only allows to provide init, program and policy.
+// Thus globally used variables are defined by their first usage.
+// These definitions here are just placed to avoid warnings in eclipse
 // ------------------------------- !!important!! -------------------------------
 controlled messageNext: SET
 controlled client_state: STRING
@@ -36,8 +33,9 @@ controlled DONE: STRING
 policy ClientSkip = skip
 
 rule InitClient = seq
-	//cannot be done over universe definition
-	//see !!important!! comment on top
+	//cannot be done facilitating universe definition
+	//see !!important!! comment on top. thus here
+	//"pseudo"-static definition used
 	CreditReviewRequest := "CreditReviewRequest"
 	ProceedMessage := "ProceedMessage"
 	DoNotProceedMessage := "DoNotProceedMessage"
@@ -95,7 +93,7 @@ rule ProgramClient = local msgSubject, message, mbr in par
 					client_state := TERMINATE
 				endseq
 				else seq
-					print "unknown message: "+ message + ", stopped listenting"
+					print "unknown message: "+ message + ", stopped listenting."
 					client_state := TERMINATE
 				endseq
 			endseq

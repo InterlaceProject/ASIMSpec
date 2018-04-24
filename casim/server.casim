@@ -11,9 +11,29 @@ scheduling whileRunning
 universe ACCOUNT_TYPES = { CC, DOMU, MIRROR, Income, Prepaid, Bisoo, Topup }
 universe OPERATION = { credit, debit }
 universe UNIT = {SRD, EUR}
-universe USER_TYPE_GROUP = { welcome, retail, company, full, employee, on_hold, MNGR, consumer, consumer_verified }
+universe USER_TYPE_GROUP = { 
+								welcome,
+								retail,
+								company,
+								full,
+								employee,
+								on_hold,
+								MNGR,
+								consumer,
+								consumer_verified
+							}
 universe CHANNEL = { Service, POS }
 
+universe MESSAGE_REQUESTS = {
+								CreditReviewRequest,
+								CreditPerformReq,
+								DebitPreviewReq,
+								DebitPerformReq,
+								DebitAckExec,
+								ProceedMessage,
+								DoNotProceedMessage,
+								TransferPerformed
+							}
 
 universe ACCOUNT_ID = {accId1, accId2, accId3}
 universe MEMBER_ID = {mbrId1, mbrId2, mbrId3}
@@ -93,27 +113,27 @@ rule Send(msg, mbr) = {
 // not permitted message
 derived NotPermitted(transfer, error) =
 	return message in
-		message := [error + " for transfer: " + transfer, "DoNotProceedMessage"]
+		message := [error + " for transfer: " + transfer, toString(DoNotProceedMessage)]
 
 //prepare normal message
 derived YouMayProceedWith(transfer) =
 	return message in
-		message := [transfer, "ProceedMessage"]
+		message := [transfer, toString(ProceedMessage)]
 
 //success message with optional limitAlert
 derived TransferPerformedSuccessfully(transfer, limitAlert) =
 	return message in
 		if limitAlert = undef then
-			message := [transfer + " performed successfully", "TransferPerformed"]
+			message := [transfer + " performed successfully", toString(TransferPerformed)]
 		else
 			message := [transfer + " performed successfully with alert " + limitAlert,
-						"TransferPerformed"]
+						toString(TransferPerformed)]
 
 //-----------------------------------------------------------------------------------------------------------
 //				begin CreditPreviewReq
 //-----------------------------------------------------------------------------------------------------------
 
-rule CreditPreviewReq(transfer, mbr) = local error in seq
+rule HandleCreditPreviewReq(transfer, mbr) = local error in seq
 	do_log(mbr + " -> CreditPreviewReq received: " + transfer, INFO)
 	
 	//do check the transfer
@@ -253,7 +273,7 @@ endseq
 //-----------------------------------------------------------------------------------------------------------
 //				begin CreditPerformReq
 //-----------------------------------------------------------------------------------------------------------
-rule CreditPerformReq(transfer, mbr) = 
+rule HandleCreditPerformReq(transfer, mbr) = 
 local fromAccID, fromAccount, fromMbrId, fromProfile, toAccID,
 		 limitAlert, bC, amount, error in seq
 		 
@@ -299,15 +319,22 @@ endseq
 //-----------------------------------------------------------------------------------------------------------
 //				begin DebitPreviewReq
 //-----------------------------------------------------------------------------------------------------------
-rule DebitPreviewReq(transfer, mbr) = {
+rule HandleDebitPreviewReq(transfer, mbr) = {
 	do_log(mbr + " -> DebitPreviewReq received" + transfer, INFO)
 }
 
 //-----------------------------------------------------------------------------------------------------------
 //				begin DebitPerformReq
 //-----------------------------------------------------------------------------------------------------------
-rule DebitPerformReq(transfer, mbr) = {
+rule HandleDebitPerformReq(transfer, mbr) = {
 	do_log(mbr + " -> DebitPerformReq received" + transfer, INFO)
+}
+
+//-----------------------------------------------------------------------------------------------------------
+//				begin DebitPerformReq
+//-----------------------------------------------------------------------------------------------------------
+rule HandleDebitAckExec(transfer, mbr) = {
+	do_log(mbr + " -> DebitAckExec received" + transfer, INFO)
 }
 
 //-----------------------------------------------------------------------------------------------------------
@@ -324,10 +351,11 @@ rule Program = {
 		
 		//dispatch messages
     	if msgIn != undef and member != undef then seq
-    		if msubject = "CreditReviewRequest" then CreditPreviewReq(msgIn, member)
-    		if msubject = "CreditPerformReq" then CreditPerformReq(msgIn, member)
-    		if msubject = "DebitPreviewReq" then DebitPreviewReq(msgIn, member)
-    		if msubject = "DebitPerformReq" then DebitPerformReq(msgIn, member)
+    		if msubject = toString(CreditReviewRequest) then HandleCreditPreviewReq(msgIn, member)
+    		if msubject = toString(CreditPerformReq) then HandleCreditPerformReq(msgIn, member)
+    		if msubject = toString(DebitPreviewReq) then HandleDebitPreviewReq(msgIn, member)
+    		if msubject = toString(DebitPerformReq) then HandleDebitPerformReq(msgIn, member)
+    		if msubject = toString(DebitAckExec) then HandleDebitAckExec(msgIn, member)
 		endseq
     endseq
 }

@@ -23,7 +23,7 @@ rule Program = local clientName, temploc in seq
 	//create new client on the 15th tick
 	if stepcount = 15 then seq
 		//Client rules are defined in clientTemplate script
-		createASIM initializedBy InitClient withProgram ProgramClient andPolicy ClientSkip in temploc
+		createASIM CRClient initializedBy InitClient withProgram ProgramClient andPolicy ClientSkip in temploc
 	endseq
 	
 	//look into inbox if a client has been sent its message and could be destroyed

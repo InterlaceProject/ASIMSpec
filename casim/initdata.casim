@@ -34,6 +34,8 @@ rule InitData = {
 	
 	
 	//init accounts
+	//note: availableBalance = balance + creditLimit
+	//note: availableCapacity = capacity - salevoulume
 	accountTable("accId1") := {
 		"AccountID" -> "accId1",
 		"accountType" -> "CC",
@@ -44,9 +46,7 @@ rule InitData = {
 		"balance" -> 8000,
 		"creditLimit" -> 10000,
 		"creditLimitDate" -> "",
-		//"availableBalance" -> 20000, //calculated: balance + creditLimit
 		"upperLimit" -> 20000
-		//"availableCapacity" -> 100000 //calculated: capacity - salevoulume
 	}
 	
 	accountTable("accId2") := {
@@ -57,9 +57,7 @@ rule InitData = {
 		"balance" -> 10000,
 		"creditLimit" -> 10000,
 		"creditLimitDate" -> "",
-		//"availableBalance" -> 20000, //calculated: balance + creditLimit
 		"upperLimit" -> 20000
-		//"availableCapacity" -> 100000 //calculated: capacity - salevoulume
 	}
 	
 	accountTable("accId3") := {
@@ -68,12 +66,6 @@ rule InitData = {
 		"accountType" -> "Income",
 		"unit" -> "EUR",
 		"balance" -> 1000
-		// not defined for "Income" account
-		//"creditLimit" -> 10000,
-		//"creditLimitDate" -> "",
-		//"upperLimit" -> 20000,
-		//"availableBalance" -> 20000, //calculated: balance + creditLimit		
-		//"availableCapacity" -> 100000
 	}
 	
 	//init user groups
@@ -89,7 +81,7 @@ rule InitData = {
 	
 	forall x in {"retail", "company", "full", "MNGR"} do TT("debit", "SRD", x) := x	
 	
-	forall x in {"retail", "full"} do TT("debit", "EUR", x) := x  
+	forall x in {"retail", "full"} do TT("debit", "EUR", x) := x
 	
 	//account connectivity (Test 2, D3.1)
 	//only for user-initiated request, does not include system-initiated requests
