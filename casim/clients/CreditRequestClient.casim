@@ -1,5 +1,5 @@
 /*includeskip begin*/
-CoreASIM clientTemplate
+CoreASIM CreditRequestClient
 use Standard 
 init dummy
 rule dummy = skip
