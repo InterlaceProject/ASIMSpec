@@ -1,5 +1,5 @@
 /*includeskip begin*/
-CoreASIM CreditRequestClient
+CoreASIM DebitRequestClient
 use Standard 
 init dummy
 rule dummy = skip
@@ -16,13 +16,13 @@ policy NoPolicy = skip
 // ------------------------------- !!important!! -------------------------------
 controlled messageNext: SET
 controlled client_state: STRING
-controlled CREDITREQUEST: MAP
+controlled DEBITREQUEST: MAP
 
-controlled CreditReviewRequest: STRING
+controlled DebitReviewRequest: STRING
 controlled DoNotProceedMessage: STRING
 controlled ProceedMessage: STRING
 controlled TransferPerformed: STRING
-controlled CreditPerformReq: STRING
+controlled DebitPerformReq: STRING
 
 controlled RECEIVE: STRING
 controlled SEND: STRING
@@ -30,14 +30,14 @@ controlled TERMINATE: STRING
 controlled DONE: STRING
 // ------------------------^^^^^^^ read important ^^^^^^^------------------------ 
 
-policy SkipCreditRequestClient = skip
+policy SkipDebitRequestClient = skip
 
-rule InitCreditRequestClient = seq
+rule InitDebitRequestClient = seq
 	//cannot be done facilitating universe definition
 	//see !!important!! comment on top. thus here are
 	//"pseudo"-static definition used
-	CreditReviewRequest := "CreditReviewRequest"
-	CreditPerformReq := "CreditPerformReq"
+	DebitReviewRequest := "DebitReviewRequest"
+	DebitPerformReq := "DebitPerformReq"
 	ProceedMessage := "ProceedMessage"
 	DoNotProceedMessage := "DoNotProceedMessage"
 	TransferPerformed := "TransferPerformed"
@@ -49,9 +49,9 @@ rule InitCreditRequestClient = seq
 	DONE := "DONE"
 	
 	//init variables
-	messageNext := { CreditReviewRequest }
+	messageNext := { DebitReviewRequest }
 	client_state := SEND
-	CREDITREQUEST := {
+	DEBITREQUEST := {
 					"from" -> "accId1",
 					"to" -> "accId2",
 					"channel" -> "Service",
@@ -60,14 +60,14 @@ rule InitCreditRequestClient = seq
 				}
 endseq
 
-rule ProgramCreditRequestClient = local msgSubject, message, mbr in par
-	//print "client_state:: " + client_state + "; messageNext:: " + messageNext + "; CreditReviewRequest:: " + CreditReviewRequest
+rule ProgramDebitRequestClient = local msgSubject, message, mbr in par
+	//print "client_state:: " + client_state + "; messageNext:: " + messageNext + "; DebitReviewRequest:: " + DebitReviewRequest
 	
 	//send initial request
-	if (CreditReviewRequest memberof messageNext) = true and client_state = SEND then par
+	if (DebitReviewRequest memberof messageNext) = true and client_state = SEND then par
 		messageNext := { DoNotProceedMessage, ProceedMessage}
 		client_state := RECEIVE
-		send CREDITREQUEST  to "server" with subject CreditReviewRequest		
+		send DEBITREQUEST  to "server" with subject DebitReviewRequest		
 	endpar
 	else
 	// check for proceedmessage message
@@ -83,8 +83,8 @@ rule ProgramCreditRequestClient = local msgSubject, message, mbr in par
 			//handle message - only if they are from a specific location 
 			if (mbr = "server@server") then seq
 				if msgSubject = ProceedMessage then seq
-					print "sending message CreditPerformReq to server"
-					send CREDITREQUEST  to "server" with subject CreditPerformReq
+					print "sending message DebitPerformReq to server"
+					send DEBITREQUEST  to "server" with subject DebitPerformReq
 					messageNext := { TransferPerformed, DoNotProceedMessage }					
 				endseq
 				else if msgSubject = DoNotProceedMessage then seq
