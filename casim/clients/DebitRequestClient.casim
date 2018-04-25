@@ -19,10 +19,11 @@ controlled client_state: STRING
 controlled DEBITREQUEST: MAP
 
 controlled DebitReviewRequest: STRING
+controlled DebitPerformReq: STRING
+controlled DebitAckExec: STRING
 controlled DoNotProceedMessage: STRING
 controlled ProceedMessage: STRING
 controlled TransferPerformed: STRING
-controlled DebitPerformReq: STRING
 
 controlled RECEIVE: STRING
 controlled SEND: STRING
@@ -38,6 +39,7 @@ rule InitDebitRequestClient = seq
 	//"pseudo"-static definition used
 	DebitReviewRequest := "DebitReviewRequest"
 	DebitPerformReq := "DebitPerformReq"
+	DebitAckExec := "DebitAckExec" //TODO: handle with second "debit" client
 	ProceedMessage := "ProceedMessage"
 	DoNotProceedMessage := "DoNotProceedMessage"
 	TransferPerformed := "TransferPerformed"
@@ -80,7 +82,7 @@ rule ProgramDebitRequestClient = local msgSubject, message, mbr in par
 			message := getMessageContent(m) 
 			mbr := getMessageSender(m)
 			
-			//handle message - only if they are from a specific location 
+			//handle messages - only if they are from the server
 			if (mbr = "server@server") then seq
 				if msgSubject = ProceedMessage then seq
 					print "sending message DebitPerformReq to server"
