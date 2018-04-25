@@ -30,9 +30,9 @@ controlled TERMINATE: STRING
 controlled DONE: STRING
 
 
-policy ClientSkip = skip
+policy SkipCreditRequestClient = skip
 
-rule InitClient = seq
+rule InitCreditRequestClient = seq
 	//cannot be done facilitating universe definition
 	//see !!important!! comment on top. thus here
 	//"pseudo"-static definition used
@@ -59,7 +59,7 @@ rule InitClient = seq
 				}
 endseq
 
-rule ProgramClient = local msgSubject, message, mbr in par
+rule ProgramCreditRequestClient = local msgSubject, message, mbr in par
 	//print "client_state:: " + client_state + "; messageNext:: " + messageNext + "; CreditReviewRequest:: " + CreditReviewRequest
 	
 	//send initial request
