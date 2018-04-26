@@ -44,6 +44,8 @@ controlled userGroupTable: MEMBER_ID -> USER_TYPE_GROUP
 controlled TT: OPERATION * UNIT * USER_TYPE_GROUP -> SET
 controlled accountConnectivity: OPERATION * UNIT * ACCOUNT_TYPES -> SET
 
+controlled Ledger: MAP
+
 //-----------------------------------------------------------------------------------------------------------
 //				begin tiny logger (because debug logger of ASM-Plugin is laborious to use)
 //-----------------------------------------------------------------------------------------------------------
@@ -81,6 +83,8 @@ endseq
 rule Start = {
 	do_log("ASIM MUTUAL CREDIT server init", INFO)
 	
+	Ledger := {->}
+	
 	//defined in initaccounts.casim
 	InitData()
 	
@@ -98,6 +102,8 @@ derived v(amap, key) =
 		else
 			choose v in amap with key = nth(v, 1) do ret := nth(v, 2)
 
+
+
 derived messageContent(msg) =
 	return content in
 		content := nth(msg, 1)
@@ -106,6 +112,7 @@ derived messageSubject(msg) =
 	return ms in
 		ms := nth(msg, 2)
 
+// send message to receipient mbr
 rule Send(msg, mbr) = {
 	send messageContent(msg) to mbr with subject messageSubject(msg)
 }
@@ -113,21 +120,26 @@ rule Send(msg, mbr) = {
 // not permitted message
 derived NotPermitted(transfer, error) =
 	return message in
-		message := [error + " for transfer: " + transfer, toString(DoNotProceedMessage)]
+		message := AssembleMessage(error + " for transfer: " + transfer, toString(DoNotProceedMessage))
 
 //prepare normal message
 derived YouMayProceedWith(transfer) =
 	return message in
-		message := [transfer, toString(ProceedMessage)]
+		message := AssembleMessage(transfer, toString(ProceedMessage))
 
 //success message with optional limitAlert
 derived TransferPerformedSuccessfully(transfer, limitAlert) =
 	return message in
 		if limitAlert = undef then
-			message := [transfer + " performed successfully", toString(TransferPerformed)]
+			message := AssembleMessage(transfer + " performed successfully", toString(TransferPerformed))
 		else
-			message := [transfer + " performed successfully with alert " + limitAlert,
-						toString(TransferPerformed)]
+			message := AssembleMessage(transfer + " performed successfully with alert " + limitAlert,
+						toString(TransferPerformed))
+						
+//put message together with subject
+derived AssembleMessage(msg, sub) =
+	return message in
+		message := [msg, sub]
 
 //check the balances
 //maybe derived function instead of returning rule
@@ -144,7 +156,7 @@ derived balanceCheck(fromAccount, toAccount, amount) =
 			else if not Receivable(amount, toAccount) then
 				message := "ViolatesUpperLimit"
 			else //what todo in that case
-				message := "Unknown Stae"
+				message := "Unknown State"
 
 //receivable for to-account
 derived Receivable(amt, acc) =
@@ -210,7 +222,8 @@ derived ownerOf(accId) =
 derived profileOf(mbrId) =
 	return profile in
 		profile := profileTable(mbrId)
-		
+
+//get group of member by id
 derived groupOf(mbrId) =
 	return group in
 		group := userGroupTable(mbrId)
@@ -267,7 +280,7 @@ rule HandleCreditPreviewReq(transfer, mbr) =
 	local error in seq
 	do_log(mbr + " -> CreditPreviewReq received: " + transfer, INFO)
 	
-	//do check the transfer if still ok
+	//do check the transfer if is ok
 	error <- PreviewCheck(
 		unitOf(fromAcc(transfer)),
 		unitOf(toAcc(transfer)),
@@ -287,6 +300,47 @@ rule HandleCreditPreviewReq(transfer, mbr) =
 	endseq
 endseq
 
+//fake transaction id
+derived NewTransactionID(len) =
+	return tID in seq
+		tID := ""
+		while (|tID| < len) tID := tID + RandomHex()
+	endseq
+
+//get random hex number
+derived RandomHex =
+	return hex in
+		choose n in [ 0..15 ] do
+			if n <= 9 then
+					hex := toString(n) 
+				else 
+					hex := nth(["a", "b", "c", "d", "e", "f"], (n - 9))
+
+//read transaction id
+derived idOf(trans) =
+	return id in
+		id := v(trans, "id")
+
+//create transaction for ledger
+derived Transaction(transfer, mbr, operation, limitAlert, date) =
+	return t in
+		t := {
+			"transfer" -> transfer,
+			"alert" -> limitAlert,
+			"date" -> date,
+			"member" -> mbr,
+			"operation" -> operation
+		}		
+
+//append transaction
+rule Append(trans, ledger) = 
+local transactionId in seq
+	transactionId := NewTransactionID(16)
+	add { transactionId -> trans } to ledger
+	
+	do_log(ledger, DEBUG)
+endseq 
+
 //-----------------------------------------------------------------------------------------------------------
 //				begin CreditPerformReq
 //-----------------------------------------------------------------------------------------------------------
@@ -297,7 +351,7 @@ local limitAlert, bC, error in seq
 	//       type v(transfer, "from"), e.g. fromAcc(transfer) 
 	// TODO: raise error on missing information
 
-	do_log(mbr + " :: CreditPerformReq received: " + transfer, INFO)
+	do_log(mbr + " -> CreditPerformReq received: " + transfer, INFO)
 	
 	//do check the transfer if still ok
 	error <- PreviewCheck(
@@ -320,9 +374,7 @@ local limitAlert, bC, error in seq
 
 		if bC = "OK" then seq
 		
-			do_log("balance check passed: performing transfer!", INFO)
-		
-			//TODO: perform transfer
+			do_log("balance check passed: performing transfer!", INFO)		
 			
 			limitAlert := CheckAccountLimitsAlerts(
 				profileOf(ownerOf(fromAcc(transfer))),
@@ -332,6 +384,9 @@ local limitAlert, bC, error in seq
 				do_log("No limit alert", DEBUG)
 			else
 				do_log("Limit alert: " + limitAlert, WARN)
+		
+			//finally performing transfer by appending to the current ledger
+			Append(Transaction(transfer, mbr, "credit", limitAlert, now), Ledger)
 			
 			//send success message, attach limitAlert if necessary
 			Send(TransferPerformedSuccessfully(transfer, limitAlert), mbr)
