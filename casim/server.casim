@@ -129,39 +129,22 @@ derived TransferPerformedSuccessfully(transfer, limitAlert) =
 			message := [transfer + " performed successfully with alert " + limitAlert,
 						toString(TransferPerformed)]
 
-//-----------------------------------------------------------------------------------------------------------
-//				begin CreditPreviewReq
-//-----------------------------------------------------------------------------------------------------------
-
-rule HandleCreditPreviewReq(transfer, mbr) = local error in seq
-	do_log(mbr + " -> CreditPreviewReq received: " + transfer, INFO)
-	
-	//do check the transfer
-	error <- CreditPreviewCheck(transfer, mbr)
-	
-	//communicate status
-	//if seq block is removed send is not performed
-	if (error = undef) then seq
-		Send(YouMayProceedWith(transfer), mbr)
-	endseq 
-	else seq
-		Send(NotPermitted(transfer, error), mbr)
-	endseq
-endseq
-
 //check the balances
 //maybe derived function instead of returning rule
 //amount condition check missing (D2.1)
 derived balanceCheck(fromAccount, toAccount, amount) =
 	return message in
-		if availableBalance(fromAccount) >= amount  and Receivable(amount, toAccount) then
-			message := "OK"
-		else if availableBalance(fromAccount) < amount then
-			message := "ViolatesLowerLimit"
-		else if not Receivable(amount, toAccount) then
-			message := "ViolatesUpperLimit"
-		else //what todo in that case
-			message := "UnknownState"
+		if (fromAccount = undef or toAccount = undef or amount = undef) then
+			message := "Message format incorrect"
+		else
+			if availableBalance(fromAccount) >= amount  and Receivable(amount, toAccount) then
+				message := "OK"
+			else if availableBalance(fromAccount) < amount then
+				message := "ViolatesLowerLimit"
+			else if not Receivable(amount, toAccount) then
+				message := "ViolatesUpperLimit"
+			else //what todo in that case
+				message := "Unknown Stae"
 
 //receivable for to-account
 derived Receivable(amt, acc) =
@@ -182,11 +165,55 @@ derived upperLimit(acc) =
 derived creditLimit(acc) =
 	return cl in
 		cl :=  v(acc, "creditLimit")
+		
+//get from account
+derived fromAcc(transfer) =
+	return fa in
+		fa :=  v(transfer, "from") 
+
+//get from account
+derived toAcc(transfer) =
+	return fa in
+		fa :=  v(transfer, "from") 
+
+//return amount
+derived amountOf(transfer) =
+	return a in
+		a := v(transfer, "amount")
 
 //calualte avaiable balance by using the account
 derived availableBalance(account) =
 	return availBal in
 		availBal := balance(account) + creditLimit(account)
+
+//get account set by id		
+derived accountOf(accId) =
+	return ac in
+		ac := accountTable(accId)
+
+//get unit of account id
+derived unitOf(accId) =
+	return unit in
+		unit := v(accountOf(accId), "unit")
+
+//get account type of account id
+derived accountType(accId) =
+	 return type in
+	 	type := v(accountOf(accId), "accountType")
+
+//get owner of account
+derived ownerOf(accId) =
+	return owner in
+		owner := v(accountOf(accId), "MemberID")
+
+//get profile of member
+derived profileOf(mbrId) =
+	return profile in
+		profile := profileTable(mbrId)
+		
+derived groupOf(mbrId) =
+	return group in
+		group := userGroupTable(mbrId)
 
 //check alert limits
 //  checked after current transfer has
@@ -204,64 +231,26 @@ derived CheckAccountLimitsAlerts(profile, account) =
 			
 // check for a credit request
 // might be party separated for the debit check (similar requirements?)
-rule CreditPreviewCheck(transfer, mbr) =
-	local errormessage, tt, ac, amount, 
-				fromAccID, fromAccount, fromMbrId, fromGrpId, fromUnit, fromAccountType,
-				toAccID, toAccount, toMbrId, toGrpId, toUnit, toAccountType, limitAlert, hasCorrectBlance in
-seq
+rule PreviewCheck(fromUnit, toUnit, fromGrpId, toGrpId, fromAccountType, toAccountType, operation) =
+local errormessage, tt, ac in seq
 	errormessage := undef
 	
-	// read from properties
-	// TODO: create dervied functions for call of
-	//       type v(transfer, "from"), e.g. fromAcc(transfer) 
-	fromAccID := v(transfer, "from")
-	do_log("fromAccID -> " + fromAccID, DEBUG)
-	fromAccount := accountTable(fromAccID)
-	do_log("fromAccount -> " + fromAccount, DEBUG)
-	fromMbrId := v(fromAccount, "MemberID")
-	do_log("fromMbrId -> " + fromMbrId, DEBUG)
-	fromGrpId := userGroupTable(fromMbrId)
-	do_log("fromGrpId -> " + fromGrpId, DEBUG)
-	fromUnit := v(fromAccount, "unit")
-	do_log("fromUnit -> " + fromUnit, DEBUG)
-	fromAccountType := v(fromAccount, "accountType")
-	do_log("fromAccountType -> " + fromAccountType, DEBUG)
-	
-	//read to properties
-	toAccID := v(transfer, "to")
-	do_log("toAccID -> " + toAccID, DEBUG)
-	toAccount := accountTable(toAccID)
-	do_log("toAccount -> " + toAccount, DEBUG)
-	toMbrId := v(toAccount, "MemberID")
-	do_log("toMbrId -> " + toMbrId, DEBUG)
-	toGrpId := userGroupTable(toMbrId)
-	do_log("toGrpId -> " + toGrpId, DEBUG)
-	toUnit := v(toAccount, "unit")
-	do_log("toUnit -> " + toUnit, DEBUG)
-	toAccountType := v(toAccount, "accountType")
-	do_log("toAccountType -> " + toAccountType, DEBUG)
-	
-	//TODO: raise error on missing information
-	
-	// checks begin -------------------------------
-	// unit check - optional
-	if (fromUnit = toUnit) then seq
-		do_log("---- units are equal ----", DEBUG)
+	// checks begin	
+	if (fromUnit = toUnit) then seq // unit check - optional
+		do_log("units are equal", DEBUG)
 		
 		tt := TT("credit", fromUnit, fromGrpId)
 		do_log("TT -> " + tt, DEBUG)
 		
-		//TT check
-		if (toGrpId memberof tt) then seq
-			do_log("---- group in TT ----", DEBUG)
+		if (toGrpId memberof tt) then seq //TT check
+			do_log("group in TT", DEBUG)
 			
-			ac := accountConnectivity("credit", fromUnit, fromAccountType) 
+			ac := accountConnectivity(operation, fromUnit, fromAccountType) 
 			do_log("AC -> " + ac, DEBUG)
 			
-			//account connectivity test
-			if (toAccountType memberof ac) then
-				do_log("---- accounts connected ----", DEBUG)
-			else errormessage := "accounts not connected"
+			if (toAccountType memberof ac) then //account connectivity test
+				do_log("accounts compatible", DEBUG)
+			else errormessage := "accounts not compatible"
 		endseq
 		else errormessage := "group NOT in TT"
 	endseq
@@ -271,38 +260,74 @@ seq
 endseq
 
 //-----------------------------------------------------------------------------------------------------------
+//				begin CreditPreviewReq
+//-----------------------------------------------------------------------------------------------------------
+
+rule HandleCreditPreviewReq(transfer, mbr) = 
+	local error in seq
+	do_log(mbr + " -> CreditPreviewReq received: " + transfer, INFO)
+	
+	//do check the transfer if still ok
+	error <- PreviewCheck(
+		unitOf(fromAcc(transfer)),
+		unitOf(toAcc(transfer)),
+		groupOf(ownerOf(fromAcc(transfer))),
+		groupOf(ownerOf(toAcc(transfer))),
+		accountType(fromAcc(transfer)),
+		accountType(toAcc(transfer)),
+		"credit")
+	
+	//communicate status
+	//if seq block is removed send is not performed
+	if (error = undef) then seq
+		Send(YouMayProceedWith(transfer), mbr)
+	endseq 
+	else seq
+		Send(NotPermitted(transfer, error), mbr)
+	endseq
+endseq
+
+//-----------------------------------------------------------------------------------------------------------
 //				begin CreditPerformReq
 //-----------------------------------------------------------------------------------------------------------
 rule HandleCreditPerformReq(transfer, mbr) = 
-local fromAccID, fromAccount, fromMbrId, fromProfile, toAccID,
-		 limitAlert, bC, amount, error in seq
-		 
-	do_log(mbr + " -> CreditPerformReq received: " + transfer, INFO)
+local limitAlert, bC, error in seq
+
+	// TODO: create dervied functions for call of
+	//       type v(transfer, "from"), e.g. fromAcc(transfer) 
+	// TODO: raise error on missing information
+
+	do_log(mbr + " :: CreditPerformReq received: " + transfer, INFO)
 	
 	//do check the transfer if still ok
-	error <- CreditPreviewCheck(transfer, mbr)
+	error <- PreviewCheck(
+		unitOf(fromAcc(transfer)),
+		unitOf(toAcc(transfer)),
+		groupOf(ownerOf(fromAcc(transfer))),
+		groupOf(ownerOf(toAcc(transfer))),
+		accountType(fromAcc(transfer)),
+		accountType(toAcc(transfer)),
+		"credit")
 
-	if (error != undef) then
-		NotPermitted(transfer, error, mbr)
+	if (error != undef) then seq
+		Send(NotPermitted(transfer, error), mbr)
+	endseq
 	else seq
-		fromAccID := v(transfer, "from")
-		toAccID := v(transfer, "to")
-		amount := v(transfer, "amount")
-		
-		bC := balanceCheck(accountTable(fromAccID), accountTable(toAccID), amount)
-		
+		bC := balanceCheck(
+			accountOf(fromAcc(transfer)),
+			accountOf(toAcc(transfer)),
+			amountOf(transfer))
+
 		if bC = "OK" then seq
-			do_log("balance check passed: performing transfer.", INFO)
-			
+		
+			do_log("balance check passed: performing transfer!", INFO)
+		
 			//TODO: perform transfer
 			
-			fromAccID := v(transfer, "from")
-			fromAccount := accountTable(fromAccID)
-			fromMbrId := v(fromAccount, "MemberID")
-			fromProfile := profileTable(fromMbrId)
-			do_log("CreditPerformReq: " + "from: " + fromAccID + ", fromMbrId: " + fromMbrId, DEBUG)
+			limitAlert := CheckAccountLimitsAlerts(
+				profileOf(ownerOf(fromAcc(transfer))),
+				accountOf(fromAcc(transfer)))
 			
-			limitAlert := CheckAccountLimitsAlerts(fromProfile, fromAccount)
 			if (limitAlert = undef) then
 				do_log("No limit alert", DEBUG)
 			else
@@ -313,8 +338,11 @@ local fromAccID, fromAccount, fromMbrId, fromProfile, toAccID,
 			
 			skip
 		endseq
-		else NotPermitted(transfer, "Balance check problem: " + bC, mbr)
-	endseq	
+		else seq
+			Send(NotPermitted(transfer, "Balance check problem: " + bC), mbr)
+		endseq
+	endseq
+	
 endseq
 //-----------------------------------------------------------------------------------------------------------
 //				begin DebitPreviewReq
