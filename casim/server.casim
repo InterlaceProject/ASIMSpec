@@ -25,7 +25,7 @@ universe USER_TYPE_GROUP = {
 universe CHANNEL = { Service, POS }
 
 universe MESSAGE_REQUESTS = {
-								CreditReviewRequest,
+								CreditReviewReq,
 								CreditPerformReq,
 								DebitPreviewReq,
 								DebitPerformReq,
@@ -425,16 +425,17 @@ rule HandleDebitAckExec(transfer, mbr) = {
 //-----------------------------------------------------------------------------------------------------------
 rule Program = {
 	forall m in inboxOf(self) do seq
-		do_log("message received", DEBUG)
-		
 		//fetch message information
 		msubject := getMessageSubject(m)
 		msgIn := getMessageContent(m)
 		member := getMessageSender(m)
 		
+		do_log("message received from " + member + " with subject " + msubject , DEBUG)
+		
+		
 		//dispatch messages
     	if msgIn != undef and member != undef then seq
-    		if msubject = toString(CreditReviewRequest) then HandleCreditPreviewReq(msgIn, member)
+    		if msubject = toString(CreditReviewReq) then HandleCreditPreviewReq(msgIn, member)
     		if msubject = toString(CreditPerformReq) then HandleCreditPerformReq(msgIn, member)
     		if msubject = toString(DebitPreviewReq) then HandleDebitPreviewReq(msgIn, member)
     		if msubject = toString(DebitPerformReq) then HandleDebitPerformReq(msgIn, member)

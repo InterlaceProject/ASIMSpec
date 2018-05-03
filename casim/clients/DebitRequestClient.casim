@@ -5,8 +5,6 @@ init dummy
 rule dummy = skip
 scheduling NoPolicy
 policy NoPolicy = skip
-/*includeskip end*/
-
 
 // ------------------------------- !!important!! -------------------------------
 // Global definitions are NOT used when instantiating a client "dynamically"
@@ -18,7 +16,7 @@ controlled messageNext: SET
 controlled client_state: STRING
 controlled DEBITREQUEST: MAP
 
-controlled DebitReviewRequest: STRING
+controlled DebitPreviewReq: STRING
 controlled DebitPerformReq: STRING
 controlled DebitAckExec: STRING
 controlled DoNotProceedMessage: STRING
@@ -30,6 +28,7 @@ controlled SEND: STRING
 controlled TERMINATE: STRING
 controlled DONE: STRING
 // ------------------------^^^^^^^ read important ^^^^^^^------------------------ 
+/*includeskip end*/
 
 policy SkipDebitRequestClient = skip
 
@@ -37,13 +36,12 @@ rule InitDebitRequestClient = seq
 	//cannot be done facilitating universe definition
 	//see !!important!! comment on top. thus here are
 	//"pseudo"-static definition used
-	DebitReviewRequest := "DebitReviewRequest"
+	DebitPreviewReq := "DebitPreviewReq"
 	DebitPerformReq := "DebitPerformReq"
 	DebitAckExec := "DebitAckExec" //TODO: handle with second "debit" client
 	ProceedMessage := "ProceedMessage"
 	DoNotProceedMessage := "DoNotProceedMessage"
 	TransferPerformed := "TransferPerformed"
-	
 	
 	RECEIVE := "RECEIVE"
 	SEND := "SEND"
@@ -51,7 +49,7 @@ rule InitDebitRequestClient = seq
 	DONE := "DONE"
 	
 	//init variables
-	messageNext := { DebitReviewRequest }
+	messageNext := { DebitPreviewReq }
 	client_state := SEND
 	DEBITREQUEST := {
 					"from" -> "accId1",
@@ -60,16 +58,18 @@ rule InitDebitRequestClient = seq
 					"amount"  -> 2000,
 					"metadata" -> {"message", "some transfer"}
 				}
+				
+	program(self) := ProgramDebitRequestClient
 endseq
 
 rule ProgramDebitRequestClient = local msgSubject, message, mbr in par
-	//print "client_state:: " + client_state + "; messageNext:: " + messageNext + "; DebitReviewRequest:: " + DebitReviewRequest
+	//print "client_state:: " + client_state + "; messageNext:: " + messageNext + "; DebitPreviewReq:: " + DebitPreviewReq
 	
 	//send initial request
-	if (DebitReviewRequest memberof messageNext) = true and client_state = SEND then par
+	if (DebitPreviewReq memberof messageNext) = true and client_state = SEND then par
 		messageNext := { DoNotProceedMessage, ProceedMessage}
 		client_state := RECEIVE
-		send DEBITREQUEST  to "server" with subject DebitReviewRequest		
+		send DEBITREQUEST  to "server" with subject DebitPreviewReq		
 	endpar
 	else
 	// check for proceedmessage message

@@ -5,8 +5,6 @@ init dummy
 rule dummy = skip
 scheduling NoPolicy
 policy NoPolicy = skip
-/*includeskip end*/
-
 
 // ------------------------------- !!important!! -------------------------------
 // Global definitions are NOT used when instantiating a client "dynamically"
@@ -18,7 +16,7 @@ controlled messageNext: SET
 controlled client_state: STRING
 controlled CREDITREQUEST: MAP
 
-controlled CreditReviewRequest: STRING
+controlled CreditReviewReq: STRING
 controlled DoNotProceedMessage: STRING
 controlled ProceedMessage: STRING
 controlled TransferPerformed: STRING
@@ -29,6 +27,7 @@ controlled SEND: STRING
 controlled TERMINATE: STRING
 controlled DONE: STRING
 // ------------------------^^^^^^^ read important ^^^^^^^------------------------ 
+/*includeskip end*/
 
 policy SkipCreditRequestClient = skip
 
@@ -36,12 +35,11 @@ rule InitCreditRequestClient = seq
 	//cannot be done facilitating universe definition
 	//see !!important!! comment on top. thus here are
 	//"pseudo"-static definition used
-	CreditReviewRequest := "CreditReviewRequest"
+	CreditReviewReq := "CreditReviewReq"
 	CreditPerformReq := "CreditPerformReq"
 	ProceedMessage := "ProceedMessage"
 	DoNotProceedMessage := "DoNotProceedMessage"
 	TransferPerformed := "TransferPerformed"
-	
 	
 	RECEIVE := "RECEIVE"
 	SEND := "SEND"
@@ -49,7 +47,7 @@ rule InitCreditRequestClient = seq
 	DONE := "DONE"
 	
 	//init variables
-	messageNext := { CreditReviewRequest }
+	messageNext := { CreditReviewReq }
 	client_state := SEND
 	CREDITREQUEST := {
 					"from" -> "accId1",
@@ -58,16 +56,18 @@ rule InitCreditRequestClient = seq
 					"amount"  -> 2000,
 					"metadata" -> {"message", "some transfer"}
 				}
+				
+	program(self) := ProgramCreditRequestClient
 endseq
 
 rule ProgramCreditRequestClient = local msgSubject, message, mbr in par
-	//print "client_state:: " + client_state + "; messageNext:: " + messageNext + "; CreditReviewRequest:: " + CreditReviewRequest
+	//print "client_state:: " + client_state + "; messageNext:: " + messageNext + "; CreditReviewReq:: " + CreditReviewReq
 	
 	//send initial request
-	if (CreditReviewRequest memberof messageNext) = true and client_state = SEND then par
+	if (CreditReviewReq memberof messageNext) = true and client_state = SEND then par
 		messageNext := { DoNotProceedMessage, ProceedMessage}
 		client_state := RECEIVE
-		send CREDITREQUEST  to "server" with subject CreditReviewRequest		
+		send CREDITREQUEST  to "server" with subject CreditReviewReq		
 	endpar
 	else
 	// check for proceedmessage message

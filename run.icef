@@ -4,7 +4,8 @@
        {
 		   "file" : "casim/scheduler.casim",
 	       "include" : [
-	       		"casim/clients/CreditRequestClient.casim"
+	       		"casim/clients/CreditRequestClient.casim",
+	       		"casim/clients/DebitRequestClient.casim"
 	       ],
 		   "start" : "true"
        }

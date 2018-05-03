@@ -12,6 +12,10 @@ controlled nextClient: CLIENT -> CLIENT
 controlled currentClient: CLIENT
 controlled state: STATE
 
+controlled initBy: CLIENT -> FUNCTION
+controlled withProg: CLIENT -> FUNCTION
+controlled andPol: CLIENT -> FUNCTION
+
 // not yet clear how asim scheduling works
 policy whileRunning = {
 	schedule server
@@ -25,6 +29,16 @@ rule Start = {
 	state := SEND_CLIENT_MESSAGE
 	
 	nextClient(CreditRequestClient) := DebitRequestClient
+	
+	//CreditRequestClient
+	initBy(CreditRequestClient) := InitCreditRequestClient
+	withProg(CreditRequestClient) := ProgramCreditRequestClient
+	andPol(CreditRequestClient) := SkipCreditRequestClient
+	
+	//DebitRequestClient
+	initBy(DebitRequestClient) := InitDebitRequestClient
+	withProg(DebitRequestClient) := ProgramDebitRequestClient
+	andPol(DebitRequestClient) := SkipDebitRequestClient
 }
 
 //-----------------------------------------------------------------------------------------------------------
@@ -36,11 +50,10 @@ rule Program = local clientName, temploc in seq
 		currentClient := nextClient(currentClient)
 		//Client rules are defined in clientTemplate script
 		if currentClient != undef then seq
-			//TODO create respective client
 			createASIM currentClient 
-				initializedBy InitCreditRequestClient
-				withProgram ProgramCreditRequestClient
-				andPolicy SkipCreditRequestClient
+				initializedBy initBy(currentClient)
+				withProgram withProg(currentClient)
+				andPolicy andPol(currentClient)
 				in temploc
 				
 			state := RECEIVE_CLIENT_MESSAGE
