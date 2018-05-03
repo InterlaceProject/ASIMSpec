@@ -5,6 +5,13 @@ use Standard
 init Start
 scheduling whileRunning
 
+universe CLIENT = { START, CreditRequestClient, DebitRequestClient }
+universe STATE = { SEND_CLIENT_MESSAGE, RECEIVE_CLIENT_MESSAGE, SCHEDULER_DONE }
+
+controlled nextClient: CLIENT -> CLIENT
+controlled currentClient: CLIENT
+controlled state: STATE
+
 // not yet clear how asim scheduling works
 policy whileRunning = {
 	schedule server
@@ -13,25 +20,44 @@ policy whileRunning = {
 
 rule Start = {
 	program(self) := Program
+	nextClient(START) := CreditRequestClient
+	currentClient := START
+	state := SEND_CLIENT_MESSAGE
+	
+	nextClient(CreditRequestClient) := DebitRequestClient
 }
 
 //-----------------------------------------------------------------------------------------------------------
 //				begin scheduler main programm
 //-----------------------------------------------------------------------------------------------------------
 rule Program = local clientName, temploc in seq
-	//print stepcount
-	//create new client on the 15th tick
-	if stepcount = 15 then seq
+	//wait a little before first client to spawn
+	if stepcount >= 15 and state = SEND_CLIENT_MESSAGE then seq
+		currentClient := nextClient(currentClient)
 		//Client rules are defined in clientTemplate script
-		createASIM CreditRequestClient initializedBy InitCreditRequestClient withProgram ProgramCreditRequestClient andPolicy SkipCreditRequestClient in temploc
+		if currentClient != undef then seq
+			//TODO create respective client
+			createASIM currentClient 
+				initializedBy InitCreditRequestClient
+				withProgram ProgramCreditRequestClient
+				andPolicy SkipCreditRequestClient
+				in temploc
+				
+			state := RECEIVE_CLIENT_MESSAGE
+		endseq
+		else state := SCHEDULER_DONE
+		
+		print "state:: " + toString(state)
 	endseq
 	
-	//look into inbox if a client has been sent its message and could be destroyed
-	choose m in inboxOf(self) with getMessageSubject(m)="Done" do seq
-		clientName := getMessageSender(m)
-		destroyASIM clientName
-		temploc := undef
-		print "--------------------------------------------------------------------------"
-		print "client removed: " + clientName
-	endseq
+	if state = RECEIVE_CLIENT_MESSAGE then
+		//look into inbox if a client has been sent its message and could be destroyed
+		choose m in inboxOf(self) with getMessageSubject(m)="Done" do seq
+			clientName := getMessageSender(m)
+			destroyASIM clientName
+			temploc := undef
+			print "--------------------------------------------------------------------------"
+			print "client removed: " + clientName
+			state := SEND_CLIENT_MESSAGE
+		endseq
 endseq
