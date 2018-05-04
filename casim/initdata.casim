@@ -5,9 +5,21 @@ init dummy
 rule dummy = skip
 scheduling NoPolicy
 policy NoPolicy = skip
+
+//copied from scheduler
+controlled profileTable: MEMBER_ID -> MAP
+controlled accountTable: ACCOUNT_ID -> MAP
+controlled userGroupTable: MEMBER_ID -> USER_TYPE_GROUP
+controlled TT: OPERATION * UNIT * USER_TYPE_GROUP -> SET
+controlled accountConnectivity: OPERATION * UNIT * ACCOUNT_TYPES -> SET
+controlled sessionData: STRING -> STRING
 /*includeskip end*/
 
-rule InitData = {	
+rule InitData = {
+	//fake session information
+	sessionData("CreditRequestClient@CreditRequestClient") := "mbrId1"
+	sessionData("DebitRequestClient@DebitRequestClient") := "mbrId1"
+
 	//init profile data
 	profileTable("mbrId1") := {
 		"lowBalanceAlert" -> 700,
@@ -15,7 +27,8 @@ rule InitData = {
 		"highVolumeAlert" -> 10000,
 		"capacity" -> 100000,
 		//"saleVolume" -> 100000 //high volumn alert
-		"saleVolume" -> 50000 //might be place somewhere else later
+		"saleVolume" -> 50000, //might be place somewhere else later
+		"accounts" -> ["accId1", "accId4"]
 	}
 	profileTable("mbrId2") := {
 		"lowBalanceAlert" -> 700,
@@ -67,6 +80,15 @@ rule InitData = {
 		"unit" -> "EUR",
 		"balance" -> 1000
 	}
+	
+	accountTable("accId4") := {
+		"AccountID" -> "accId3",
+		"MemberID" -> "mbrId1",
+		"accountType" -> "Income",
+		"unit" -> "EUR",
+		"balance" -> 1000
+	}
+	
 	
 	//init user groups
 	userGroupTable("mbrId1") := "company"

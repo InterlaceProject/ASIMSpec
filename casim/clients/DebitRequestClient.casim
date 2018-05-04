@@ -52,11 +52,10 @@ rule InitDebitRequestClient = seq
 	messageNext := { DebitPreviewReq }
 	client_state := SEND
 	DEBITREQUEST := {
-					"from" -> "accId1",
-					"to" -> "accId2",
+					"debitor" -> "mbrId1",
 					"channel" -> "Service",
 					"amount"  -> 2000,
-					"metadata" -> {"message", "some transfer"}
+					"metadata" -> {"message", "some debit transfer"}
 				}
 				
 	program(self) := ProgramDebitRequestClient

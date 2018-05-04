@@ -1,6 +1,7 @@
 CoreASIM server
 
 use TurboASMPlugin
+use ConditionalRule
 use Standard
 
 init Start
@@ -43,6 +44,7 @@ controlled accountTable: ACCOUNT_ID -> MAP
 controlled userGroupTable: MEMBER_ID -> USER_TYPE_GROUP
 controlled TT: OPERATION * UNIT * USER_TYPE_GROUP -> SET
 controlled accountConnectivity: OPERATION * UNIT * ACCOUNT_TYPES -> SET
+controlled sessionData: STRING -> STRING
 
 controlled Ledger: MAP
 
@@ -192,6 +194,12 @@ derived toAcc(transfer) =
 derived amountOf(transfer) =
 	return a in
 		a := v(transfer, "amount")
+		
+//get debitor member id of a transfer
+derived debitorOf(transfer) =
+	return mbrId in
+		mbrId := v(transfer, "debitor")
+
 
 //calualte avaiable balance by using the account
 derived availableBalance(account) =
@@ -227,6 +235,22 @@ derived profileOf(mbrId) =
 derived groupOf(mbrId) =
 	return group in
 		group := userGroupTable(mbrId)
+
+//get member id by using session information
+derived activeLogin(client) =
+	return mbrId in
+		mbrId := sessionData(client)
+
+derived memberAccounts(profile) =
+	return aL in
+		aL := profile("accounts")
+
+//get credit account
+derived creditAccount(mbrId) =
+	return accId in
+		forall acc in memberAccounts(profileOf(mbrId)) do
+			if ownerOf(acc) = mbrId and accountType(acc) = "CC"  then
+				accId := acc		
 
 //check alert limits
 //  checked after current transfer has
@@ -310,11 +334,9 @@ derived NewTransactionID(len) =
 //get random hex number
 derived RandomHex =
 	return hex in
-		choose n in [ 0..15 ] do
-			if n <= 9 then
-					hex := toString(n) 
-				else 
-					hex := nth(["a", "b", "c", "d", "e", "f"], (n - 9))
+		choose n in ["0", "1", "2", "3", "4", 
+					 "5", "6", "7", "8", "9", 
+					 "a", "b", "c", "d", "e", "f"] do hex := n
 
 //read transaction id
 derived idOf(trans) =
@@ -346,12 +368,7 @@ endseq
 //-----------------------------------------------------------------------------------------------------------
 rule HandleCreditPerformReq(transfer, mbr) = 
 local limitAlert, bC, error in seq
-
-	// TODO: create dervied functions for call of
-	//       type v(transfer, "from"), e.g. fromAcc(transfer) 
-	// TODO: raise error on missing information
-
-	do_log(mbr + " -> CreditPerformReq received: " + transfer, INFO)
+	do_log(mbr + " -> CreditPerformReq received: " + transfer, INFO)	
 	
 	//do check the transfer if still ok
 	error <- PreviewCheck(
@@ -399,18 +416,56 @@ local limitAlert, bC, error in seq
 	endseq
 	
 endseq
+
 //-----------------------------------------------------------------------------------------------------------
 //				begin DebitPreviewReq
 //-----------------------------------------------------------------------------------------------------------
-rule HandleDebitPreviewReq(transfer, mbr) = {
-	do_log(mbr + " -> DebitPreviewReq received" + transfer, INFO)
-}
+rule HandleDebitPreviewReq(transfer, mbr) = seq
+	do_log(creditor + " -> DebitPreviewReq received: " + transfer, INFO)
+	
+	//debitor=buyer 
+	fromA := creditAccount(debitorOf(transfer))
+	//get login information
+	creditor := activeLogin(mbr)
+	//creditor=seller
+	toA := creditAccount(activeLogin(mbr))
+	
+	do_log(creditor + " -> login name: " + creditor, DEBUG)
+	do_log(creditor + " -> profile: " + profileOf(creditor), DEBUG)
+	do_log(creditor + " -> accounts: " + memberAccounts(profileOf(creditor)), DEBUG)
+	do_log(creditor + " -> creditAccount: " + creditAccount(creditor), DEBUG)
+	do_log("from Account:: "+ fromA, DEBUG)
+	do_log("toAccount::" + toA, DEBUG)
+	
+	//do check the transfer if still ok
+	error <- PreviewCheck(
+		unitOf(fromA),
+		unitOf(toA),
+		//fromGroup and toGroup are both from the seller/creditor
+		groupOf(creditor),
+		groupOf(creditor),
+		accountType(fromA),
+		accountType(toA),
+		"debit")
+	
+	do_log("PreviewCheck:: " + error, DEBUG)
+	
+	//communicate status
+	//if seq block is removed send is not performed
+	if (error = undef) then seq
+		Send(YouMayProceedWith(transfer), mbr)
+	endseq 
+	else seq
+		Send(NotPermitted(transfer, error), mbr)
+	endseq
+endseq
 
 //-----------------------------------------------------------------------------------------------------------
 //				begin DebitPerformReq
 //-----------------------------------------------------------------------------------------------------------
 rule HandleDebitPerformReq(transfer, mbr) = {
-	do_log(mbr + " -> DebitPerformReq received" + transfer, INFO)
+	do_log(mbr + " -> DebitPerformReq received:: " + transfer, INFO)
+	do_log(mbr + " -> DebitPerformReq TODO", DEBUG)
 }
 
 //-----------------------------------------------------------------------------------------------------------
