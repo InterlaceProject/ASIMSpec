@@ -18,7 +18,7 @@ controlled sessionData: STRING -> STRING
 rule InitData = {
 	//fake session information
 	sessionData("CreditRequestClient@CreditRequestClient") := "mbrId1"
-	sessionData("DebitRequestClient@DebitRequestClient") := "mbrId1"
+	sessionData("DebitRequestClient@DebitRequestClient") := "mbrId2"
 
 	//init profile data
 	profileTable("mbrId1") := {
@@ -35,7 +35,8 @@ rule InitData = {
 		"highBalanceAlert" -> 500,		
 		"highVolumeAlert" -> 10000,
 		"capacity" -> 100000,		
-		"saleVolume" -> 50000 //might be place somewhere else later
+		"saleVolume" -> 50000, //might be place somewhere else later
+		"accounts" -> ["accId2", "accId5"]
 	}
 	profileTable("mbrId3") := {
 		"lowBalanceAlert" -> 1000,
@@ -84,6 +85,14 @@ rule InitData = {
 	accountTable("accId4") := {
 		"AccountID" -> "accId3",
 		"MemberID" -> "mbrId1",
+		"accountType" -> "Income",
+		"unit" -> "EUR",
+		"balance" -> 1000
+	}
+	
+	accountTable("accId5") := {
+		"AccountID" -> "accId3",
+		"MemberID" -> "mbrId2",
 		"accountType" -> "Income",
 		"unit" -> "EUR",
 		"balance" -> 1000

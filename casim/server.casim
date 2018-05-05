@@ -151,7 +151,7 @@ derived balanceCheck(fromAccount, toAccount, amount) =
 		if (fromAccount = undef or toAccount = undef or amount = undef) then
 			message := "Message format incorrect"
 		else
-			if availableBalance(fromAccount) >= amount  and Receivable(amount, toAccount) then
+			if availableBalance(fromAccount) >= amount and Receivable(amount, toAccount) then
 				message := "OK"
 			else if availableBalance(fromAccount) < amount then
 				message := "ViolatesLowerLimit"
@@ -248,9 +248,62 @@ derived memberAccounts(profile) =
 //get credit account
 derived creditAccount(mbrId) =
 	return accId in
-		forall acc in memberAccounts(profileOf(mbrId)) do
-			if ownerOf(acc) = mbrId and accountType(acc) = "CC"  then
-				accId := acc		
+		if memberAccounts(profileOf(mbrId)) = undef then
+			accId := undef
+		else
+			forall acc in memberAccounts(profileOf(mbrId)) do
+				if ownerOf(acc) = mbrId and accountType(acc) = "CC"  then
+					accId := acc
+				
+//fake transaction id
+derived NewTransactionID(len) =
+	return tID in seq
+		tID := ""
+		while (|tID| < len) tID := tID + RandomHex()
+	endseq
+
+//get random hex number
+derived RandomHex =
+	return hex in
+		choose n in ["0", "1", "2", "3", "4", 
+					 "5", "6", "7", "8", "9", 
+					 "a", "b", "c", "d", "e", "f"] do hex := n
+
+//read transaction id
+derived idOf(trans) =
+	return id in
+		id := v(trans, "id")
+
+//create transaction for ledger
+derived Transaction(transfer, mbr, operation, limitAlert, date) =
+	return t in
+		t := {
+			"transfer" -> transfer,
+			"alert" -> limitAlert,
+			"date" -> date,
+			"member" -> mbr,
+			"operation" -> operation
+		}		
+
+//append transaction
+rule Append(trans, ledger) = 
+local transactionId in seq
+	transactionId := NewTransactionID(16)
+	add { transactionId -> trans } to ledger
+	
+	do_log(ledger, DEBUG)
+endseq
+
+//check for "small" amount
+derived Small(amount) =
+	return small in
+		small := (amount < 100)
+
+//test if an one time pad has been expired		
+derived Expired(otp) = 
+	return expired in
+		expired := ((now - birthtime(otp)) > lifetimeForOTPs)
+			
 
 //check alert limits
 //  checked after current transfer has
@@ -324,45 +377,6 @@ rule HandleCreditPreviewReq(transfer, mbr) =
 	endseq
 endseq
 
-//fake transaction id
-derived NewTransactionID(len) =
-	return tID in seq
-		tID := ""
-		while (|tID| < len) tID := tID + RandomHex()
-	endseq
-
-//get random hex number
-derived RandomHex =
-	return hex in
-		choose n in ["0", "1", "2", "3", "4", 
-					 "5", "6", "7", "8", "9", 
-					 "a", "b", "c", "d", "e", "f"] do hex := n
-
-//read transaction id
-derived idOf(trans) =
-	return id in
-		id := v(trans, "id")
-
-//create transaction for ledger
-derived Transaction(transfer, mbr, operation, limitAlert, date) =
-	return t in
-		t := {
-			"transfer" -> transfer,
-			"alert" -> limitAlert,
-			"date" -> date,
-			"member" -> mbr,
-			"operation" -> operation
-		}		
-
-//append transaction
-rule Append(trans, ledger) = 
-local transactionId in seq
-	transactionId := NewTransactionID(16)
-	add { transactionId -> trans } to ledger
-	
-	do_log(ledger, DEBUG)
-endseq 
-
 //-----------------------------------------------------------------------------------------------------------
 //				begin CreditPerformReq
 //-----------------------------------------------------------------------------------------------------------
@@ -391,7 +405,7 @@ local limitAlert, bC, error in seq
 
 		if bC = "OK" then seq
 		
-			do_log("balance check passed: performing transfer!", INFO)		
+			do_log("balance check passed: performing credit transfer!", INFO)		
 			
 			limitAlert := CheckAccountLimitsAlerts(
 				profileOf(ownerOf(fromAcc(transfer))),
@@ -422,6 +436,10 @@ endseq
 //-----------------------------------------------------------------------------------------------------------
 rule HandleDebitPreviewReq(transfer, mbr) = seq
 	do_log(creditor + " -> DebitPreviewReq received: " + transfer, INFO)
+	do_log(creditor + " -> login name: " + creditor, DEBUG)
+	do_log(creditor + " -> profile: " + profileOf(creditor), DEBUG)
+	do_log(creditor + " -> accounts: " + memberAccounts(profileOf(creditor)), DEBUG)
+	do_log(creditor + " -> creditAccount: " + creditAccount(creditor), DEBUG)
 	
 	//debitor=buyer 
 	fromA := creditAccount(debitorOf(transfer))
@@ -429,13 +447,8 @@ rule HandleDebitPreviewReq(transfer, mbr) = seq
 	creditor := activeLogin(mbr)
 	//creditor=seller
 	toA := creditAccount(activeLogin(mbr))
-	
-	do_log(creditor + " -> login name: " + creditor, DEBUG)
-	do_log(creditor + " -> profile: " + profileOf(creditor), DEBUG)
-	do_log(creditor + " -> accounts: " + memberAccounts(profileOf(creditor)), DEBUG)
-	do_log(creditor + " -> creditAccount: " + creditAccount(creditor), DEBUG)
 	do_log("from Account:: "+ fromA, DEBUG)
-	do_log("toAccount::" + toA, DEBUG)
+	do_log("to Account::" + toA, DEBUG)
 	
 	//do check the transfer if still ok
 	error <- PreviewCheck(
@@ -463,10 +476,75 @@ endseq
 //-----------------------------------------------------------------------------------------------------------
 //				begin DebitPerformReq
 //-----------------------------------------------------------------------------------------------------------
-rule HandleDebitPerformReq(transfer, mbr) = {
+rule HandleDebitPerformReq(transfer, mbr) = seq
 	do_log(mbr + " -> DebitPerformReq received:: " + transfer, INFO)
-	do_log(mbr + " -> DebitPerformReq TODO", DEBUG)
-}
+	do_log(creditor + " -> login name: " + creditor, DEBUG)
+	do_log(creditor + " -> profile: " + profileOf(creditor), DEBUG)
+	do_log(creditor + " -> accounts: " + memberAccounts(profileOf(creditor)), DEBUG)
+	do_log(creditor + " -> creditAccount: " + creditAccount(creditor), DEBUG)
+	
+	//debitor=buyer 
+	fromA := creditAccount(debitorOf(transfer))
+	//get login information
+	creditor := activeLogin(mbr)
+	//creditor=seller
+	toA := creditAccount(activeLogin(mbr))
+	do_log("from Account:: "+ fromA, DEBUG)
+	do_log("to Account::" + toA, DEBUG)
+	
+	//re-do check the transfer if still ok
+	error <- PreviewCheck(
+		unitOf(fromA),
+		unitOf(toA),
+		//fromGroup and toGroup are both from the seller/creditor
+		groupOf(creditor),
+		groupOf(creditor),
+		accountType(fromA),
+		accountType(toA),
+		"debit")
+	
+	do_log("PreviewCheck:: " + error, DEBUG)
+	
+	if (error != undef) then seq
+		do_log("error:: " + error, DEBUG)
+		Send(NotPermitted(transfer, error), mbr)
+	endseq
+	else seq
+		bC := balanceCheck(accountOf(fromA), accountOf(toA), amountOf(transfer))		
+		
+		//do_log("blanace from:: " + balance(accountOf(fromA)), DEBUG)
+		//do_log("blanace to:: " + balance(accountOf(toA)), DEBUG)
+		do_log("bC:: " + bC, DEBUG)
+		
+		if bC = "OK" then seq
+		
+			limitAlert := CheckAccountLimitsAlerts(
+				profileOf(ownerOf(fromA)),
+				accountOf(fromA))
+			
+			if (limitAlert = undef) then
+				do_log("No limit alert", DEBUG)
+			else
+				do_log("Limit alert: " + limitAlert, WARN)
+				
+			if Small(amountOf(transfer)) then seq
+				do_log("balance check passed: performing debit transfer for small amount!", INFO)		
+		
+				//finally performing transfer by appending to the current ledger
+				Append(Transaction(transfer, mbr, "debit", limitAlert, now), Ledger)
+				
+				//send success message, attach limitAlert if necessary
+				Send(TransferPerformedSuccessfully(transfer, limitAlert), mbr)
+			endseq
+			else seq
+				do_log(mbr + " -> debit OTP TODO", DEBUG)
+			endseq
+		endseq
+		else seq
+			Send(NotPermitted(transfer, "Balance check problem: " + bC), mbr)
+		endseq
+	endseq
+endseq
 
 //-----------------------------------------------------------------------------------------------------------
 //				begin DebitPerformReq

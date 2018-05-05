@@ -54,7 +54,8 @@ rule InitDebitRequestClient = seq
 	DEBITREQUEST := {
 					"debitor" -> "mbrId1",
 					"channel" -> "Service",
-					"amount"  -> 2000,
+					//"amount"  -> 500, //instant transfer
+					"amount" -> 2000, //needs acknowledgement	
 					"metadata" -> {"message", "some debit transfer"}
 				}
 				
