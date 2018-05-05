@@ -24,11 +24,11 @@ policy whileRunning = {
 
 rule Start = {
 	program(self) := Program
-	nextClient(START) := CreditRequestClient
+	nextClient(START) := DebitRequestClient
 	currentClient := START
 	state := SEND_CLIENT_MESSAGE
 	
-	nextClient(CreditRequestClient) := DebitRequestClient
+	//nextClient(CreditRequestClient) := DebitRequestClient
 	
 	//CreditRequestClient
 	initBy(CreditRequestClient) := InitCreditRequestClient

@@ -33,7 +33,8 @@ universe MESSAGE_REQUESTS = {
 								DebitAckExec,
 								ProceedMessage,
 								DoNotProceedMessage,
-								TransferPerformed
+								TransferPerformed,
+								ConfirmationReq
 							}
 
 universe ACCOUNT_ID = {accId1, accId2, accId3}
@@ -44,7 +45,8 @@ controlled accountTable: ACCOUNT_ID -> MAP
 controlled userGroupTable: MEMBER_ID -> USER_TYPE_GROUP
 controlled TT: OPERATION * UNIT * USER_TYPE_GROUP -> SET
 controlled accountConnectivity: OPERATION * UNIT * ACCOUNT_TYPES -> SET
-controlled sessionData: STRING -> STRING
+//controlled sessionData: STRING -> STRING
+controlled sessionData: MAP
 
 controlled Ledger: MAP
 
@@ -239,7 +241,15 @@ derived groupOf(mbrId) =
 //get member id by using session information
 derived activeLogin(client) =
 	return mbrId in
-		mbrId := sessionData(client)
+		forall session in sessionData do
+			if client = nth(session, 1) then
+				mbrId := nth(session, 2)
+				
+//get client id by using session information
+derived activeClient(login_mbrId) =
+	return client in
+		choose session in sessionData with login_mbrId = nth(session, 2) do
+				client := nth(session, 1)
 
 derived memberAccounts(profile) =
 	return aL in
@@ -478,10 +488,7 @@ endseq
 //-----------------------------------------------------------------------------------------------------------
 rule HandleDebitPerformReq(transfer, mbr) = seq
 	do_log(mbr + " -> DebitPerformReq received:: " + transfer, INFO)
-	do_log(creditor + " -> login name: " + creditor, DEBUG)
-	do_log(creditor + " -> profile: " + profileOf(creditor), DEBUG)
-	do_log(creditor + " -> accounts: " + memberAccounts(profileOf(creditor)), DEBUG)
-	do_log(creditor + " -> creditAccount: " + creditAccount(creditor), DEBUG)
+	
 	
 	//debitor=buyer 
 	fromA := creditAccount(debitorOf(transfer))
@@ -489,6 +496,12 @@ rule HandleDebitPerformReq(transfer, mbr) = seq
 	creditor := activeLogin(mbr)
 	//creditor=seller
 	toA := creditAccount(activeLogin(mbr))
+	
+	do_log(creditor + " -> login name: " + creditor, DEBUG)
+	do_log(creditor + " -> profile: " + profileOf(creditor), DEBUG)
+	do_log(creditor + " -> accounts: " + memberAccounts(profileOf(creditor)), DEBUG)
+	do_log(creditor + " -> creditAccount: " + creditAccount(creditor), DEBUG)
+	
 	do_log("from Account:: "+ fromA, DEBUG)
 	do_log("to Account::" + toA, DEBUG)
 	
@@ -534,7 +547,8 @@ rule HandleDebitPerformReq(transfer, mbr) = seq
 				Append(Transaction(transfer, mbr, "debit", limitAlert, now), Ledger)
 				
 				//send success message, attach limitAlert if necessary
-				Send(TransferPerformedSuccessfully(transfer, limitAlert), mbr)
+				Send(TransferPerformedSuccessfully(transfer, limitAlert), activeClient(creditor)) //send to creditor
+				Send(TransferPerformedSuccessfully(transfer, limitAlert), activeClient(debitorOf(transfer))) //TODO: send to debitor
 			endseq
 			else seq
 				do_log(mbr + " -> debit OTP TODO", DEBUG)
@@ -564,7 +578,6 @@ rule Program = {
 		member := getMessageSender(m)
 		
 		do_log("message received from " + member + " with subject " + msubject , DEBUG)
-		
 		
 		//dispatch messages
     	if msgIn != undef and member != undef then seq

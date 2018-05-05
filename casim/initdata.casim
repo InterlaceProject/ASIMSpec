@@ -12,13 +12,21 @@ controlled accountTable: ACCOUNT_ID -> MAP
 controlled userGroupTable: MEMBER_ID -> USER_TYPE_GROUP
 controlled TT: OPERATION * UNIT * USER_TYPE_GROUP -> SET
 controlled accountConnectivity: OPERATION * UNIT * ACCOUNT_TYPES -> SET
-controlled sessionData: STRING -> STRING
+//controlled sessionData: STRING -> STRING
+controlled sessionData: MAP
 /*includeskip end*/
 
 rule InitData = {
 	//fake session information
-	sessionData("CreditRequestClient@CreditRequestClient") := "mbrId1"
-	sessionData("DebitRequestClient@DebitRequestClient") := "mbrId2"
+	//sessionData("CreditRequestClient@CreditRequestClient") := "mbrId1"
+	//sessionData("DebitAcknowledgeClient@DebitAcknowledgeClient") := "mbrId1"
+	//sessionData("DebitRequestClient@DebitRequestClient") := "mbrId2"
+	
+	sessionData := {
+		"CreditRequestClient@CreditRequestClient" -> "mbrId1",
+		"DebitAcknowledgeClient@DebitAcknowledgeClient" -> "mbrId4",
+		"DebitRequestClient@DebitRequestClient" -> "mbrId2"
+	}
 
 	//init profile data
 	profileTable("mbrId1") := {
@@ -45,7 +53,16 @@ rule InitData = {
 		"capacity" -> 100000,		
 		"saleVolume" -> 100000 //might be place somewhere else later
 	}
-	
+	//init profile data
+	profileTable("mbrId4") := {
+		"lowBalanceAlert" -> 700,
+		"highBalanceAlert" -> 1000,		
+		"highVolumeAlert" -> 10000,
+		"capacity" -> 100000,
+		//"saleVolume" -> 100000 //high volumn alert
+		"saleVolume" -> 50000, //might be place somewhere else later
+		"accounts" -> ["accId6", "accId7"]
+	}
 	
 	//init accounts
 	//note: availableBalance = balance + creditLimit
@@ -83,7 +100,7 @@ rule InitData = {
 	}
 	
 	accountTable("accId4") := {
-		"AccountID" -> "accId3",
+		"AccountID" -> "accId4",
 		"MemberID" -> "mbrId1",
 		"accountType" -> "Income",
 		"unit" -> "EUR",
@@ -91,11 +108,30 @@ rule InitData = {
 	}
 	
 	accountTable("accId5") := {
-		"AccountID" -> "accId3",
+		"AccountID" -> "accId5",
 		"MemberID" -> "mbrId2",
 		"accountType" -> "Income",
 		"unit" -> "EUR",
 		"balance" -> 1000
+	}
+	
+	accountTable("accId6") := {
+		"AccountID" -> "accId6",
+		"MemberID" -> "mbrId4",
+		"accountType" -> "Income",
+		"unit" -> "EUR",
+		"balance" -> 1000
+	}
+	
+	accountTable("accId7") := {
+		"AccountID" -> "accId7",
+		"accountType" -> "CC",
+		"MemberID" -> "mbrId4",
+		"unit" -> "SRD",
+		"balance" -> 8000,
+		"creditLimit" -> 10000,
+		"creditLimitDate" -> "",
+		"upperLimit" -> 20000
 	}
 	
 	

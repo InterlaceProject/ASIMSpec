@@ -1,5 +1,5 @@
 /*includeskip begin*/
-CoreASIM DebitRequestClient
+CoreASIM DebitAcknowledgeClient
 use Standard 
 init dummy
 rule dummy = skip
@@ -22,6 +22,7 @@ controlled DebitAckExec: STRING
 controlled DoNotProceedMessage: STRING
 controlled ProceedMessage: STRING
 controlled TransferPerformed: STRING
+controlled ConfirmationReq: STRING
 
 controlled RECEIVE: STRING
 controlled SEND: STRING
@@ -30,9 +31,9 @@ controlled DONE: STRING
 // ------------------------^^^^^^^ read important ^^^^^^^------------------------ 
 /*includeskip end*/
 
-policy SkipDebitRequestClient = skip
+policy SkipDebitAcknowledgeClient = skip
 
-rule InitDebitRequestClient = seq
+rule InitDebitAcknowledgeClient = seq
 	//cannot be done facilitating universe definition
 	//see !!important!! comment on top. thus here are
 	//"pseudo"-static definition used
@@ -42,6 +43,7 @@ rule InitDebitRequestClient = seq
 	ProceedMessage := "ProceedMessage"
 	DoNotProceedMessage := "DoNotProceedMessage"
 	TransferPerformed := "TransferPerformed"
+	ConfirmationReq := "ConfirmationReq"
 	
 	RECEIVE := "RECEIVE"
 	SEND := "SEND"
@@ -52,17 +54,17 @@ rule InitDebitRequestClient = seq
 	messageNext := { DebitPreviewReq }
 	client_state := SEND
 	DEBITREQUEST := {
-					"debitor" -> "mbrId4",
+					"debitor" -> "mbrId1",
 					"channel" -> "Service",
 					//"amount"  -> 500, //instant transfer
 					"amount" -> 2000, //needs acknowledgement	
 					"metadata" -> {"message", "some debit transfer"}
 				}
 				
-	program(self) := ProgramDebitRequestClient
+	program(self) := ProgramDebitAcknowledgeClient
 endseq
 
-rule ProgramDebitRequestClient = local msgSubject, message, mbr in par
+rule ProgramDebitAcknowledgeClient = local msgSubject, message, mbr in par
 	//print "client_state:: " + client_state + "; messageNext:: " + messageNext + "; DebitPreviewReq:: " + DebitPreviewReq
 	
 	//send initial request
