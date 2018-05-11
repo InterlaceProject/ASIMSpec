@@ -285,11 +285,10 @@ derived idOf(trans) =
 		id := v(trans, "id")
 
 //create transaction for ledger
-derived Transaction(transfer, mbr, operation, limitAlert, date) =
+derived Transaction(transfer, mbr, operation, date) =
 	return t in
 		t := {
 			"transfer" -> transfer,
-			"alert" -> limitAlert,
 			"date" -> date,
 			"member" -> mbr,
 			"operation" -> operation
@@ -417,6 +416,9 @@ local limitAlert, bC, error in seq
 		
 			do_log("balance check passed: performing credit transfer!", INFO)		
 			
+			//finally performing transfer by appending to the current ledger
+			Append(Transaction(transfer, mbr, "credit", now), Ledger)
+			
 			limitAlert := CheckAccountLimitsAlerts(
 				profileOf(ownerOf(fromAcc(transfer))),
 				accountOf(fromAcc(transfer)))
@@ -426,8 +428,6 @@ local limitAlert, bC, error in seq
 			else
 				do_log("Limit alert: " + limitAlert, WARN)
 		
-			//finally performing transfer by appending to the current ledger
-			Append(Transaction(transfer, mbr, "credit", limitAlert, now), Ledger)
 			
 			//send success message, attach limitAlert if necessary
 			Send(TransferPerformedSuccessfully(transfer, limitAlert), mbr)
@@ -531,24 +531,24 @@ rule HandleDebitPerformReq(transfer, mbr) = seq
 		
 		if bC = "OK" then seq
 		
-			limitAlert := CheckAccountLimitsAlerts(
-				profileOf(ownerOf(fromA)),
-				accountOf(fromA))
-			
-			if (limitAlert = undef) then
-				do_log("No limit alert", DEBUG)
-			else
-				do_log("Limit alert: " + limitAlert, WARN)
-				
 			if Small(amountOf(transfer)) then seq
 				do_log("balance check passed: performing debit transfer for small amount!", INFO)		
 		
 				//finally performing transfer by appending to the current ledger
-				Append(Transaction(transfer, mbr, "debit", limitAlert, now), Ledger)
+				Append(Transaction(transfer, mbr, "debit", now), Ledger)
 				
+				limitAlert := CheckAccountLimitsAlerts(
+				profileOf(ownerOf(fromA)),
+				accountOf(fromA))
+			
+				if (limitAlert = undef) then
+					do_log("No limit alert", DEBUG)
+				else
+					do_log("Limit alert: " + limitAlert, WARN)
+					
 				//send success message, attach limitAlert if necessary
 				Send(TransferPerformedSuccessfully(transfer, limitAlert), activeClient(creditor)) //send to creditor
-				Send(TransferPerformedSuccessfully(transfer, limitAlert), activeClient(debitorOf(transfer))) //TODO: send to debitor
+				Send(TransferPerformedSuccessfully(transfer, limitAlert), activeClient(debitorOf(transfer))) //send to debitor
 			endseq
 			else seq
 				do_log(mbr + " -> debit OTP TODO", DEBUG)

@@ -39,7 +39,7 @@ rule InitDebitAcknowledgeClient = seq
 	//"pseudo"-static definition used
 	DebitPreviewReq := "DebitPreviewReq"
 	DebitPerformReq := "DebitPerformReq"
-	DebitAckExec := "DebitAckExec" //TODO: handle with second "debit" client
+	DebitAckExec := "DebitAckExec"
 	ProceedMessage := "ProceedMessage"
 	DoNotProceedMessage := "DoNotProceedMessage"
 	TransferPerformed := "TransferPerformed"
@@ -51,29 +51,14 @@ rule InitDebitAcknowledgeClient = seq
 	DONE := "DONE"
 	
 	//init variables
-	messageNext := { DebitPreviewReq }
-	client_state := SEND
-	DEBITREQUEST := {
-					"debitor" -> "mbrId1",
-					"channel" -> "Service",
-					//"amount"  -> 500, //instant transfer
-					"amount" -> 2000, //needs acknowledgement	
-					"metadata" -> {"message", "some debit transfer"}
-				}
-				
+	messageNext := { }
+	client_state := RECEIVE			
 	program(self) := ProgramDebitAcknowledgeClient
 endseq
 
 rule ProgramDebitAcknowledgeClient = local msgSubject, message, mbr in par
 	//print "client_state:: " + client_state + "; messageNext:: " + messageNext + "; DebitPreviewReq:: " + DebitPreviewReq
 	
-	//send initial request
-	if (DebitPreviewReq memberof messageNext) = true and client_state = SEND then par
-		messageNext := { DoNotProceedMessage, ProceedMessage}
-		client_state := RECEIVE
-		send DEBITREQUEST  to "server" with subject DebitPreviewReq		
-	endpar
-	else
 	// check for proceedmessage message
 	if client_state = RECEIVE then par
 		forall m in inboxOf(self) do seq
@@ -84,25 +69,10 @@ rule ProgramDebitAcknowledgeClient = local msgSubject, message, mbr in par
 			message := getMessageContent(m) 
 			mbr := getMessageSender(m)
 			
+			//TODO
 			//handle messages - only if they are from the server
 			if (mbr = "server@server") then seq
-				if msgSubject = ProceedMessage then seq
-					print "sending message DebitPerformReq to server"
-					send DEBITREQUEST  to "server" with subject DebitPerformReq
-					messageNext := { TransferPerformed, DoNotProceedMessage }					
-				endseq
-				else if msgSubject = DoNotProceedMessage then seq
-					print "cannot proceed with request: " + message
-					client_state := TERMINATE
-				endseq
-				else if msgSubject = TransferPerformed then seq
-					print "Transfer status: " + message
-					client_state := TERMINATE
-				endseq
-				else seq
-					print "unknown message: "+ message + ", stopped listenting."
-					client_state := TERMINATE
-				endseq
+				print "TODO!!!"
 			endseq
 		endseq
 	endpar
