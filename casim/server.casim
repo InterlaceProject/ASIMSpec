@@ -178,11 +178,20 @@ derived UnitsMismatch(fromA, toA) =
 //check the balances
 //maybe derived function instead of returning rule
 //amount condition check missing (D2.1)
-derived balanceCheck(fromAccount, toAccount, amount) =
+derived AccountLimitsCheck(fromAccount, toAccount, amount) =
 	return message in
 		if (fromAccount = undef or toAccount = undef or amount = undef) then
 			message := "Message format incorrect"
 		else
+			if CanBeSpentBy(fromAccount, amount) then
+				if CanBeCashedBy(toAccount, amount) then
+					if HasSellCapacityFor(toAccount, amount) then
+						message := "OK"
+					else message := "CapacityViolation"
+				else message := "UpperLimitViolation"
+			else message := "AvailBalanceViolation"
+		
+/*		
 			if availableBalance(fromAccount) >= amount and Receivable(amount, toAccount) then
 				message := "OK"
 			else if availableBalance(fromAccount) < amount then
@@ -191,11 +200,19 @@ derived balanceCheck(fromAccount, toAccount, amount) =
 				message := "ViolatesUpperLimit"
 			else //what todo in that case
 				message := "Unknown State"
+*/
 
-//receivable for to-account
-derived Receivable(amt, acc) =
-	return pass in
-		pass := ((balance(acc) + amt) <= upperLimit(acc))
+derived CanBeSpentBy(fromAcc, amount) =
+	return spendable in
+		spendable := (availableBalance(fromAcc) >= amount)
+ 
+derived CanBeCashedBy(toAcc, amount) =
+	return cashable in
+		cashable := ((balance(toAcc) + amount) <= upperLimit(toAcc))
+		
+derived HasSellCapacityFor(toAcc, amount) =
+	return sellable in
+		sellable := (amount <= availableCapacity(toAcc))
 
 //get balance for account	
 derived balance(acc) =
@@ -237,6 +254,11 @@ derived debitorOf(transfer) =
 derived availableBalance(account) =
 	return availBal in
 		availBal := balance(account) + creditLimit(account)
+
+//calualte avaiable balance by using the account
+derived availableCapacity(toAcc) =
+	return capacity in
+		capacity := 100000000000000000 //TODO!!!
 
 //get account set by id		
 derived accountOf(accId) =
@@ -446,7 +468,7 @@ local limitAlert, bC, error in seq
 		Send(NotPermitted(transfer, error), client)
 	endseq
 	else seq
-		bC := balanceCheck(
+		bC := AccountLimitsCheck(
 			accountOf(fromAcc(transfer)),
 			accountOf(toAcc(transfer)),
 			amountOf(transfer))
@@ -531,7 +553,6 @@ endseq
 rule HandleDebitPerformReq(transfer, client) = seq
 	do_log(client + " -> DebitPerformReq received:: " + transfer, INFO)
 	
-	
 	//debitor=buyer 
 	fromA := creditAccount(debitorOf(transfer))
 	//get login information
@@ -566,7 +587,7 @@ rule HandleDebitPerformReq(transfer, client) = seq
 		Send(NotPermitted(transfer, error), client)
 	endseq
 	else seq
-		bC := balanceCheck(accountOf(fromA), accountOf(toA), amountOf(transfer))		
+		bC := AccountLimitsCheck(accountOf(fromA), accountOf(toA), amountOf(transfer))		
 		
 		//do_log("blanace from:: " + balance(accountOf(fromA)), DEBUG)
 		//do_log("blanace to:: " + balance(accountOf(toA)), DEBUG)
