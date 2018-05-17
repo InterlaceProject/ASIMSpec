@@ -139,11 +139,41 @@ derived TransferPerformedSuccessfully(transfer, limitAlert) =
 		else
 			message := AssembleMessage(transfer + " performed successfully with alert " + limitAlert,
 						toString(TransferPerformed))
-						
+
 //put message together with subject
 derived AssembleMessage(msg, sub) =
 	return message in
 		message := [msg, sub]
+
+//"not account owner" - message 
+derived NotAccountOwner(mbr, accId) =
+	return message in
+		message := mbr + " is not owner of account " + accId
+
+//source group not correct
+derived SourceGroupViolation(mbr) =
+	return message in
+		message := mbr + " in group " + groupOf(mbr) + " does not have the right privilegedes for that transfer" 
+
+//destination group not correct
+derived DestinationGroupViolation(mbr, tt) =
+	return message in
+		message := "mbr is in group " + groupOf(mbr) + "but needs to be in one of these " + tt
+
+//account connectivity not defined
+derived SourceAccountViolation(fromA) =
+	return message in
+		message := "source account " + fromA + " not of the correct type"
+
+// account not connected
+derived DestinationAccountViolation(fromA, ac) =
+	return message in
+		message := fromA + "account " + fromA + " is not in one of these groups " + ac
+
+//units are different - necessary?
+derived UnitsMismatch(fromA, toA) =
+	return message in
+		message := "Unit mismatch: from account " + fromA + " has unit " + unitOf(fromA) + " and to account " + toA + " has unit " + unitOf(toA)
 
 //check the balances
 //maybe derived function instead of returning rule
@@ -242,7 +272,7 @@ derived groupOf(mbrId) =
 derived activeLogin(client) =
 	return mbrId in
 		forall session in sessionData do
-			if client = nth(session, 1) then
+			if toString(client) = nth(session, 1) then
 				mbrId := nth(session, 2)
 				
 //get client id by using session information
@@ -330,30 +360,37 @@ derived CheckAccountLimitsAlerts(profile, account) =
 			
 // check for a credit request
 // might be party separated for the debit check (similar requirements?)
-rule PreviewCheck(fromUnit, toUnit, fromGrpId, toGrpId, fromAccountType, toAccountType, operation) =
+// Credit/DebitTypeCheck
+rule PreviewCheck(mbr, fromA, toA, fromGrpId, toGrpId, fromAccountType, toAccountType, operation) =
 local errormessage, tt, ac in seq
-	errormessage := undef
+	errormessage := undef //TODO create message from derived function
 	
 	// checks begin	
-	if (fromUnit = toUnit) then seq // unit check - optional
+	if (unitOf(fromA) = unitOf(toA)) then seq // unit check - optional
 		do_log("units are equal", DEBUG)
 		
-		tt := TT("credit", fromUnit, fromGrpId)
+		tt := TT("credit", unitOf(fromA), fromGrpId)
 		do_log("TT -> " + tt, DEBUG)
 		
-		if (toGrpId memberof tt) then seq //TT check
+		if (mbr != ownerOf(fromA)) then
+			errormessage := NotAccountOwner(mbr, fromA)
+		else if (tt = undef) then //replaces MayStartCredit/DebitOpns
+			errormessage := SourceGroupViolation(mbr)
+		else if (toGrpId memberof tt) then seq //TT check
 			do_log("group in TT", DEBUG)
 			
-			ac := accountConnectivity(operation, fromUnit, fromAccountType) 
+			ac := accountConnectivity(operation, unitOf(fromA), fromAccountType) 
 			do_log("AC -> " + ac, DEBUG)
 			
-			if (toAccountType memberof ac) then //account connectivity test
+			if (ac = undef) then
+				errormessage := SourceAccountViolation(fromA)
+			else if (toAccountType memberof ac) then //account connectivity test
 				do_log("accounts compatible", DEBUG)
-			else errormessage := "accounts not compatible"
+			else errormessage := DestinationAccountViolation(fromA, ac)
 		endseq
-		else errormessage := "group NOT in TT"
+		else errormessage := DestinationGroupViolation(mbr, tt)
 	endseq
-	else errormessage := "Units mismatch"
+	else errormessage := UnitsMismatch(fromA, toA)
 	
 	result := errormessage
 endseq
@@ -362,14 +399,15 @@ endseq
 //				begin CreditPreviewReq
 //-----------------------------------------------------------------------------------------------------------
 
-rule HandleCreditPreviewReq(transfer, mbr) = 
+rule HandleCreditPreviewReq(transfer, client) = 
 	local error in seq
-	do_log(mbr + " -> CreditPreviewReq received: " + transfer, INFO)
+	do_log(client + " -> CreditPreviewReq received: " + transfer, INFO)
 	
 	//do check the transfer if is ok
 	error <- PreviewCheck(
-		unitOf(fromAcc(transfer)),
-		unitOf(toAcc(transfer)),
+		activeLogin(client),
+		fromAcc(transfer),
+		toAcc(transfer),
 		groupOf(ownerOf(fromAcc(transfer))),
 		groupOf(ownerOf(toAcc(transfer))),
 		accountType(fromAcc(transfer)),
@@ -379,24 +417,25 @@ rule HandleCreditPreviewReq(transfer, mbr) =
 	//communicate status
 	//if seq block is removed send is not performed
 	if (error = undef) then seq
-		Send(YouMayProceedWith(transfer), mbr)
+		Send(YouMayProceedWith(transfer), client)
 	endseq 
 	else seq
-		Send(NotPermitted(transfer, error), mbr)
+		Send(NotPermitted(transfer, error), client)
 	endseq
 endseq
 
 //-----------------------------------------------------------------------------------------------------------
 //				begin CreditPerformReq
 //-----------------------------------------------------------------------------------------------------------
-rule HandleCreditPerformReq(transfer, mbr) = 
+rule HandleCreditPerformReq(transfer, client) = 
 local limitAlert, bC, error in seq
-	do_log(mbr + " -> CreditPerformReq received: " + transfer, INFO)	
+	do_log(client + " -> CreditPerformReq received: " + transfer, INFO)	
 	
 	//do check the transfer if still ok
 	error <- PreviewCheck(
-		unitOf(fromAcc(transfer)),
-		unitOf(toAcc(transfer)),
+		activeLogin(client),
+		fromAcc(transfer),
+		toAcc(transfer),
 		groupOf(ownerOf(fromAcc(transfer))),
 		groupOf(ownerOf(toAcc(transfer))),
 		accountType(fromAcc(transfer)),
@@ -404,7 +443,7 @@ local limitAlert, bC, error in seq
 		"credit")
 
 	if (error != undef) then seq
-		Send(NotPermitted(transfer, error), mbr)
+		Send(NotPermitted(transfer, error), client)
 	endseq
 	else seq
 		bC := balanceCheck(
@@ -417,7 +456,7 @@ local limitAlert, bC, error in seq
 			do_log("balance check passed: performing credit transfer!", INFO)		
 			
 			//finally performing transfer by appending to the current ledger
-			Append(Transaction(transfer, mbr, "credit", now), Ledger)
+			Append(Transaction(transfer, client, "credit", now), Ledger)
 			
 			limitAlert := CheckAccountLimitsAlerts(
 				profileOf(ownerOf(fromAcc(transfer))),
@@ -430,12 +469,12 @@ local limitAlert, bC, error in seq
 		
 			
 			//send success message, attach limitAlert if necessary
-			Send(TransferPerformedSuccessfully(transfer, limitAlert), mbr)
+			Send(TransferPerformedSuccessfully(transfer, limitAlert), client)
 			
 			skip
 		endseq
 		else seq
-			Send(NotPermitted(transfer, "Balance check problem: " + bC), mbr)
+			Send(NotPermitted(transfer, "Balance check problem: " + bC), client)
 		endseq
 	endseq
 	
@@ -444,7 +483,10 @@ endseq
 //-----------------------------------------------------------------------------------------------------------
 //				begin DebitPreviewReq
 //-----------------------------------------------------------------------------------------------------------
-rule HandleDebitPreviewReq(transfer, mbr) = seq
+rule HandleDebitPreviewReq(transfer, client) = seq
+	//get login information
+	creditor := activeLogin(client)
+		
 	do_log(creditor + " -> DebitPreviewReq received: " + transfer, INFO)
 	do_log(creditor + " -> login name: " + creditor, DEBUG)
 	do_log(creditor + " -> profile: " + profileOf(creditor), DEBUG)
@@ -453,17 +495,17 @@ rule HandleDebitPreviewReq(transfer, mbr) = seq
 	
 	//debitor=buyer 
 	fromA := creditAccount(debitorOf(transfer))
-	//get login information
-	creditor := activeLogin(mbr)
+	
 	//creditor=seller
-	toA := creditAccount(activeLogin(mbr))
+	toA := creditAccount(activeLogin(client))
 	do_log("from Account:: "+ fromA, DEBUG)
 	do_log("to Account::" + toA, DEBUG)
 	
 	//do check the transfer if still ok
 	error <- PreviewCheck(
-		unitOf(fromA),
-		unitOf(toA),
+		debitorOf(transfer),
+		fromA,
+		toA,
 		//fromGroup and toGroup are both from the seller/creditor
 		groupOf(creditor),
 		groupOf(creditor),
@@ -476,26 +518,26 @@ rule HandleDebitPreviewReq(transfer, mbr) = seq
 	//communicate status
 	//if seq block is removed send is not performed
 	if (error = undef) then seq
-		Send(YouMayProceedWith(transfer), mbr)
+		Send(YouMayProceedWith(transfer), client)
 	endseq 
 	else seq
-		Send(NotPermitted(transfer, error), mbr)
+		Send(NotPermitted(transfer, error), client)
 	endseq
 endseq
 
 //-----------------------------------------------------------------------------------------------------------
 //				begin DebitPerformReq
 //-----------------------------------------------------------------------------------------------------------
-rule HandleDebitPerformReq(transfer, mbr) = seq
-	do_log(mbr + " -> DebitPerformReq received:: " + transfer, INFO)
+rule HandleDebitPerformReq(transfer, client) = seq
+	do_log(client + " -> DebitPerformReq received:: " + transfer, INFO)
 	
 	
 	//debitor=buyer 
 	fromA := creditAccount(debitorOf(transfer))
 	//get login information
-	creditor := activeLogin(mbr)
+	creditor := activeLogin(client)
 	//creditor=seller
-	toA := creditAccount(activeLogin(mbr))
+	toA := creditAccount(activeLogin(client))
 	
 	do_log(creditor + " -> login name: " + creditor, DEBUG)
 	do_log(creditor + " -> profile: " + profileOf(creditor), DEBUG)
@@ -507,8 +549,9 @@ rule HandleDebitPerformReq(transfer, mbr) = seq
 	
 	//re-do check the transfer if still ok
 	error <- PreviewCheck(
-		unitOf(fromA),
-		unitOf(toA),
+		debitorOf(transfer),
+		fromA,
+		toA,
 		//fromGroup and toGroup are both from the seller/creditor
 		groupOf(creditor),
 		groupOf(creditor),
@@ -520,7 +563,7 @@ rule HandleDebitPerformReq(transfer, mbr) = seq
 	
 	if (error != undef) then seq
 		do_log("error:: " + error, DEBUG)
-		Send(NotPermitted(transfer, error), mbr)
+		Send(NotPermitted(transfer, error), client)
 	endseq
 	else seq
 		bC := balanceCheck(accountOf(fromA), accountOf(toA), amountOf(transfer))		
@@ -535,7 +578,7 @@ rule HandleDebitPerformReq(transfer, mbr) = seq
 				do_log("balance check passed: performing debit transfer for small amount!", INFO)		
 		
 				//finally performing transfer by appending to the current ledger
-				Append(Transaction(transfer, mbr, "debit", now), Ledger)
+				Append(Transaction(transfer, client, "debit", now), Ledger)
 				
 				limitAlert := CheckAccountLimitsAlerts(
 				profileOf(ownerOf(fromA)),
@@ -551,11 +594,11 @@ rule HandleDebitPerformReq(transfer, mbr) = seq
 				Send(TransferPerformedSuccessfully(transfer, limitAlert), activeClient(debitorOf(transfer))) //send to debitor
 			endseq
 			else seq
-				do_log(mbr + " -> debit OTP TODO", DEBUG)
+				do_log(client + " -> debit OTP TODO", DEBUG)
 			endseq
 		endseq
 		else seq
-			Send(NotPermitted(transfer, "Balance check problem: " + bC), mbr)
+			Send(NotPermitted(transfer, "Balance check problem: " + bC), client)
 		endseq
 	endseq
 endseq
@@ -563,8 +606,8 @@ endseq
 //-----------------------------------------------------------------------------------------------------------
 //				begin DebitPerformReq
 //-----------------------------------------------------------------------------------------------------------
-rule HandleDebitAckExec(transfer, mbr) = {
-	do_log(mbr + " -> DebitAckExec received" + transfer, INFO)
+rule HandleDebitAckExec(transfer, client) = {
+	do_log(client + " -> DebitAckExec received" + transfer, INFO)
 }
 
 //-----------------------------------------------------------------------------------------------------------
