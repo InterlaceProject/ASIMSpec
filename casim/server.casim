@@ -3,6 +3,7 @@ CoreASIM server
 use TurboASMPlugin
 use ConditionalRule
 use Standard
+use TimePlugin
 
 init Start
 
@@ -423,7 +424,7 @@ derived CheckAccountLimitsAlerts(profile, account) =
 // check for a credit request
 // might be party separated for the debit check (similar requirements?)
 // Credit/DebitTypeCheck
-rule PreviewCheck(mbr, fromA, toA, fromGrpId, toGrpId, fromAccountType, toAccountType, operation) =
+rule PreviewCheck(mbr, fromA, toA, fromGrpId, toGrpId, operation) =
 local errormessage, tt, ac in seq
 	errormessage := undef //TODO create message from derived function
 	
@@ -441,12 +442,12 @@ local errormessage, tt, ac in seq
 		else if (toGrpId memberof tt) then seq //TT check
 			do_log("group in TT", DEBUG)
 			
-			ac := accountConnectivity(operation, unitOf(fromA), fromAccountType) 
+			ac := accountConnectivity(operation, unitOf(fromA), accountType(fromA)) 
 			do_log("AC -> " + ac, DEBUG)
 			
 			if (ac = undef) then
 				errormessage := SourceAccountViolation(fromA)
-			else if (toAccountType memberof ac) then //account connectivity test
+			else if (accountType(toA) memberof ac) then //account connectivity test
 				do_log("accounts compatible", DEBUG)
 			else errormessage := DestinationAccountViolation(fromA, ac)
 		endseq
@@ -472,8 +473,6 @@ rule HandleCreditPreviewReq(transfer, client) =
 		toAcc(transfer),
 		groupOf(ownerOf(fromAcc(transfer))),
 		groupOf(ownerOf(toAcc(transfer))),
-		accountType(fromAcc(transfer)),
-		accountType(toAcc(transfer)),
 		"credit")
 	
 	//communicate status
@@ -500,8 +499,6 @@ local limitAlert, bC, error in seq
 		toAcc(transfer),
 		groupOf(ownerOf(fromAcc(transfer))),
 		groupOf(ownerOf(toAcc(transfer))),
-		accountType(fromAcc(transfer)),
-		accountType(toAcc(transfer)),
 		"credit")
 
 	if (error != undef) then seq
@@ -571,8 +568,6 @@ rule HandleDebitPreviewReq(transfer, client) = seq
 		//fromGroup and toGroup are both from the seller/creditor
 		groupOf(creditor),
 		groupOf(creditor),
-		accountType(fromA),
-		accountType(toA),
 		"debit")
 	
 	do_log("PreviewCheck:: " + error, DEBUG)
@@ -616,8 +611,6 @@ rule HandleDebitPerformReq(transfer, client) = seq
 		//fromGroup and toGroup are both from the seller/creditor
 		groupOf(creditor),
 		groupOf(creditor),
-		accountType(fromA),
-		accountType(toA),
 		"debit")
 	
 	do_log("PreviewCheck:: " + error, DEBUG)
