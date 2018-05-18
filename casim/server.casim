@@ -82,7 +82,7 @@ rule do_log(text, level) = local write_log in seq
 endseq
 
 //-----------------------------------------------------------------------------------------------------------
-//				begin globally used rules
+//				init
 //-----------------------------------------------------------------------------------------------------------
 rule Start = {
 	do_log("ASIM MUTUAL CREDIT server init", INFO)
@@ -98,15 +98,9 @@ rule Start = {
 	program(self) := Program
 }
 
-//read value from a map (amap) identified by a key
-derived v(amap, key) =
-	return ret in
-		if amap = undef then
-			ret := undef
-		else
-			choose v in amap with key = nth(v, 1) do ret := nth(v, 2)
-
-
+//-----------------------------------------------------------------------------------------------------------
+//				begin messaging rules
+//-----------------------------------------------------------------------------------------------------------
 
 derived messageContent(msg) =
 	return content in
@@ -120,6 +114,10 @@ derived messageSubject(msg) =
 rule Send(msg, mbr) = {
 	send messageContent(msg) to mbr with subject messageSubject(msg)
 }
+
+//-----------------------------------------------------------------------------------------------------------
+//				begin message assembling
+//-----------------------------------------------------------------------------------------------------------
 
 // not permitted message
 derived NotPermitted(transfer, error) =
@@ -170,10 +168,57 @@ derived DestinationAccountViolation(fromA, ac) =
 	return message in
 		message := fromA + "account " + fromA + " is not in one of these groups " + ac
 
+//LowBalanceAlert
+derived LowBalanceAlert =
+	return message in
+		message := "LowBalanceAlert"
+
+//HighBalanceAlert
+derived HighBalanceAlert =
+	return message in
+		message := "HighBalanceAlert"
+		
+//HighVolumeAlert
+derived HighVolumeAlert =
+	return message in
+		message := "HighVolumeAlert"
+		
+//CapacityViolation
+derived CapacityViolation =
+	return message in
+		message := "CapacityViolation"
+
+//AvailBalanceViolation
+derived AvailBalanceViolation =
+	return message in
+		message := "AvailBalanceViolation"
+
+//UpperLimitViolation
+derived UpperLimitViolation =
+	return message in
+		message := "UpperLimitViolation"
+		
+//OK
+derived OK =
+	return message in
+		message := "OK"
+
 //units are different - necessary?
 derived UnitsMismatch(fromA, toA) =
 	return message in
 		message := "Unit mismatch: from account " + fromA + " has unit " + unitOf(fromA) + " and to account " + toA + " has unit " + unitOf(toA)
+
+//-----------------------------------------------------------------------------------------------------------
+//				begin globally used rules
+//-----------------------------------------------------------------------------------------------------------
+
+//read value of a map (amap) identified by a key
+derived v(amap, key) =
+	return ret in
+		if amap = undef then
+			ret := undef
+		else
+			choose v in amap with key = nth(v, 1) do ret := nth(v, 2)
 
 //check the balances
 //maybe derived function instead of returning rule
@@ -186,21 +231,17 @@ derived AccountLimitsCheck(fromAccount, toAccount, amount) =
 			if CanBeSpentBy(fromAccount, amount) then
 				if CanBeCashedBy(toAccount, amount) then
 					if HasSellCapacityFor(toAccount, amount) then
-						message := "OK"
-					else message := "CapacityViolation"
-				else message := "UpperLimitViolation"
-			else message := "AvailBalanceViolation"
-		
-/*		
-			if availableBalance(fromAccount) >= amount and Receivable(amount, toAccount) then
-				message := "OK"
-			else if availableBalance(fromAccount) < amount then
-				message := "ViolatesLowerLimit"
-			else if not Receivable(amount, toAccount) then
-				message := "ViolatesUpperLimit"
-			else //what todo in that case
-				message := "Unknown State"
-*/
+						message := OK()
+					else
+						message := CapacityViolation()
+					endif
+				else 
+					message := UpperLimitViolation()
+				endif
+			else
+				message := AvailBalanceViolation()
+			endif
+		endif
 
 derived CanBeSpentBy(fromAcc, amount) =
 	return spendable in
@@ -363,8 +404,7 @@ derived Small(amount) =
 //test if an one time pad has been expired		
 derived Expired(otp) = 
 	return expired in
-		expired := ((now - birthtime(otp)) > lifetimeForOTPs)
-			
+		expired := ((now - birthtime(otp)) > lifetimeForOTPs) //TODO
 
 //check alert limits
 //  checked after current transfer has
@@ -372,11 +412,11 @@ derived Expired(otp) =
 derived CheckAccountLimitsAlerts(profile, account) =
 	return alert in
 		if ((creditLimit(account) + balance(account)) < v(profile, "lowBalanceAlert")) then
-			alert := "LowBalanceAlert"
+			alert := LowBalanceAlert()
 		else if ((upperLimit(account) - balance(account)) < v(profile, "highBalanceAlert")) then
-			alert := "HighBalanceAlert"
+			alert := HighBalanceAlert()
 		else if ((v(profile, "capacity") - v(profile, "saleVolume")) < v(profile, "highVolumeAlert")) then
-			alert := "HighVolumeAlert"
+			alert := HighVolumeAlert()
 		else 
 			alert := undef
 			
