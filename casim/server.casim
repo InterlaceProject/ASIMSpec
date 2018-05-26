@@ -51,6 +51,8 @@ controlled sessionData: MAP
 controlled Ledger: MAP
 controlled PendingTransactions: MAP
 
+controlled lifetimeForOTPs: INTEGER
+
 //-----------------------------------------------------------------------------------------------------------
 //				begin tiny logger (because debug logger of ASM-Plugin is laborious to use)
 //-----------------------------------------------------------------------------------------------------------
@@ -90,6 +92,7 @@ rule Start = {
 	
 	Ledger := {->}
 	PendingTransactions := {->}
+	lifetimeForOTPs := 100000000000
 	
 	//defined in initaccounts.casim
 	InitData()
@@ -359,6 +362,11 @@ derived memberAccounts(profile) =
 	return aL in
 		aL := profile("accounts")
 
+//status of transaction
+derived status(transaction) =
+	return s in
+		s := v(transaction, "state")
+
 //get credit account
 derived creditAccount(mbrId) =
 	return accId in
@@ -426,6 +434,11 @@ derived Small(amount) =
 derived Expired(otp) = 
 	return expired in
 		expired := ((now - birthtime(otp)) > lifetimeForOTPs) //TODO
+
+//get time when otp has been created
+derived birthtime(otp) =
+	return time in
+		time := v(v(PendingTransactions, otp), "created")
 
 //check alert limits
 //  checked after current transfer has
@@ -698,10 +711,21 @@ endseq
 //-----------------------------------------------------------------------------------------------------------
 //				begin DebitPerformReq
 //-----------------------------------------------------------------------------------------------------------
-rule HandleDebitAckCompletion(transfer, client) = {
+rule HandleDebitAckCompletion(transfer, client) = local otp, transaction in seq
 	do_log(client + " -> DebitAckCompletion received" + transfer, INFO)
-	//if not Expired(otpOf(transfer)) then 
-}
+	otp := otpOf(transfer)
+	transaction := v(PendingTransactions, otp)
+	
+	do_log("OTP: " + otp, DEBUG)
+	do_log("trans: " + transaction, DEBUG)
+	do_log("status: " + status(transaction), DEBUG)
+	
+	if (transaction = undef) or (status(transaction) != "pending") then
+		print "todo error"
+	else if not Expired(otp) then seq
+		print "todo transfer" 
+	endseq
+endseq
 
 //-----------------------------------------------------------------------------------------------------------
 //				begin main programm
