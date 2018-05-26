@@ -54,9 +54,8 @@ rule ProgramDebitAcknowledgeClient = local msgSubject, message, mbr in par
 			
 			//handle messages - only if they are from the server
 			if mbr = "server@server" and msgSubject = ConfirmationReq then seq
-				print "Received: " + msgSubject
-				print "  Message: " + message
-				print "  From mbr: " + mbr
+				//send acknoledgement back for transfer
+				send message to mbr with subject DebitAckCompletion
 			endseq
 		endseq
 	endpar

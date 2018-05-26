@@ -31,7 +31,7 @@ universe MESSAGE_REQUESTS = {
 								CreditPerformReq,
 								DebitPreviewReq,
 								DebitPerformReq,
-								DebitAckExec,
+								DebitAckCompletion,
 								ProceedMessage,
 								DoNotProceedMessage,
 								TransferPerformed,
@@ -698,8 +698,9 @@ endseq
 //-----------------------------------------------------------------------------------------------------------
 //				begin DebitPerformReq
 //-----------------------------------------------------------------------------------------------------------
-rule HandleDebitAckExec(transfer, client) = {
-	do_log(client + " -> DebitAckExec received" + transfer, INFO)
+rule HandleDebitAckCompletion(transfer, client) = {
+	do_log(client + " -> DebitAckCompletion received" + transfer, INFO)
+	//if not Expired(otpOf(transfer)) then 
 }
 
 //-----------------------------------------------------------------------------------------------------------
@@ -720,7 +721,7 @@ rule Program = {
     		if msubject = toString(CreditPerformReq) then HandleCreditPerformReq(msgIn, member)
     		if msubject = toString(DebitPreviewReq) then HandleDebitPreviewReq(msgIn, member)
     		if msubject = toString(DebitPerformReq) then HandleDebitPerformReq(msgIn, member)
-    		if msubject = toString(DebitAckExec) then HandleDebitAckExec(msgIn, member)
+    		if msubject = toString(DebitAckCompletion) then HandleDebitAckCompletion(msgIn, member)
 		endseq
     endseq
 }
