@@ -12,20 +12,11 @@ policy NoPolicy = skip
 // Thus globally used variables are defined by their first usage.
 // These definitions here are just placed to avoid warnings in eclipse
 // ------------------------------- !!important!! -------------------------------
-controlled messageNext: SET
 controlled client_state: STRING
-controlled DEBITREQUEST: MAP
-
-controlled DebitPreviewReq: STRING
-controlled DebitPerformReq: STRING
-controlled DebitAckExec: STRING
-controlled DoNotProceedMessage: STRING
-controlled ProceedMessage: STRING
-controlled TransferPerformed: STRING
+controlled DebitAckCompletion: STRING
 controlled ConfirmationReq: STRING
 
 controlled RECEIVE: STRING
-controlled SEND: STRING
 controlled TERMINATE: STRING
 controlled DONE: STRING
 // ------------------------^^^^^^^ read important ^^^^^^^------------------------ 
@@ -37,21 +28,13 @@ rule InitDebitAcknowledgeClient = seq
 	//cannot be done facilitating universe definition
 	//see !!important!! comment on top. thus here are
 	//"pseudo"-static definition used
-	DebitPreviewReq := "DebitPreviewReq"
-	DebitPerformReq := "DebitPerformReq"
-	DebitAckExec := "DebitAckExec"
-	ProceedMessage := "ProceedMessage"
-	DoNotProceedMessage := "DoNotProceedMessage"
-	TransferPerformed := "TransferPerformed"
 	ConfirmationReq := "ConfirmationReq"
+	DebitAckCompletion := "DebitAckCompletion"
 	
 	RECEIVE := "RECEIVE"
-	SEND := "SEND"
 	TERMINATE := "TERMINATE"
 	DONE := "DONE"
 	
-	//init variables
-	messageNext := { }
 	client_state := RECEIVE			
 	program(self) := ProgramDebitAcknowledgeClient
 endseq
@@ -69,10 +52,11 @@ rule ProgramDebitAcknowledgeClient = local msgSubject, message, mbr in par
 			message := getMessageContent(m) 
 			mbr := getMessageSender(m)
 			
-			//TODO
 			//handle messages - only if they are from the server
-			if (mbr = "server@server") then seq
-				print "TODO!!!"
+			if mbr = "server@server" and msgSubject = ConfirmationReq then seq
+				print "Received: " + msgSubject
+				print "  Message: " + message
+				print "  From mbr: " + mbr
 			endseq
 		endseq
 	endpar

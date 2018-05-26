@@ -46,10 +46,10 @@ controlled accountTable: ACCOUNT_ID -> MAP
 controlled userGroupTable: MEMBER_ID -> USER_TYPE_GROUP
 controlled TT: OPERATION * UNIT * USER_TYPE_GROUP -> SET
 controlled accountConnectivity: OPERATION * UNIT * ACCOUNT_TYPES -> SET
-//controlled sessionData: STRING -> STRING
 controlled sessionData: MAP
 
 controlled Ledger: MAP
+controlled PendingTransactions: MAP
 
 //-----------------------------------------------------------------------------------------------------------
 //				begin tiny logger (because debug logger of ASM-Plugin is laborious to use)
@@ -89,6 +89,7 @@ rule Start = {
 	do_log("ASIM MUTUAL CREDIT server init", INFO)
 	
 	Ledger := {->}
+	PendingTransactions := {->}
 	
 	//defined in initaccounts.casim
 	InitData()
@@ -138,6 +139,11 @@ derived TransferPerformedSuccessfully(transfer, limitAlert) =
 		else
 			message := AssembleMessage(transfer + " performed successfully with alert " + limitAlert,
 						toString(TransferPerformed))
+
+//create confirmation for debit request
+derived ConfirmationRequest(transfer) =
+	return message in
+		message := AssembleMessage(transfer, toString(ConfirmationReq))
 
 //put message together with subject
 derived AssembleMessage(msg, sub) =
@@ -291,6 +297,10 @@ derived debitorOf(transfer) =
 	return mbrId in
 		mbrId := v(transfer, "debitor")
 
+//determine otp
+derived otpOf(transfer) =
+	return otp in
+		otp := v(transfer, "otp")
 
 //calualte avaiable balance by using the account
 derived availableBalance(account) =
@@ -338,7 +348,7 @@ derived activeLogin(client) =
 		forall session in sessionData do
 			if toString(client) = nth(session, 1) then
 				mbrId := nth(session, 2)
-				
+			
 //get client id by using session information
 derived activeClient(login_mbrId) =
 	return client in
@@ -361,6 +371,16 @@ derived creditAccount(mbrId) =
 				
 //fake transaction id
 derived NewTransactionID(len) =
+	return tID in
+		tID := HexString(len)
+	
+//one time pad generation
+derived OneTimePassword(strength) =
+	return otp in
+		otp := HexString(strength)
+		
+//generate a random hex string with given length
+derived HexString(len) =
 	return tID in seq
 		tID := ""
 		while (|tID| < len) tID := tID + RandomHex()
@@ -647,14 +667,32 @@ rule HandleDebitPerformReq(transfer, client) = seq
 				Send(TransferPerformedSuccessfully(transfer, limitAlert), activeClient(creditor)) //send to creditor
 				Send(TransferPerformedSuccessfully(transfer, limitAlert), activeClient(debitorOf(transfer))) //send to debitor
 			endseq
-			else seq
-				do_log(client + " -> debit OTP TODO", DEBUG)
+			else local dummy in seq
+				do_log(client + " -> debit creating pending transaction", DEBUG)
+				
+				Insert(transfer, creditor, PendingTransactions)
+				
+				Send(ConfirmationRequest(transfer), activeClient(debitorOf(transfer)))
+				skip //dummy command to get the message sent
 			endseq
 		endseq
 		else seq
 			Send(NotPermitted(transfer, "Balance check problem: " + bC), client)
 		endseq
 	endseq
+endseq
+
+rule Insert(transfer, creditor, pendingTransactions) = local otp in seq
+	otp := OneTimePassword(20)
+	
+	//add missing information
+	add { "otp" -> otp} to transfer
+	add { "creditor" -> creditor } to transfer
+	add { "created" -> now } to transfer
+	add { "state" -> "pending" } to transfer
+	
+	//add the pending transfer to the pending transactions
+	add { otp -> transfer } to pendingTransactions
 endseq
 
 //-----------------------------------------------------------------------------------------------------------

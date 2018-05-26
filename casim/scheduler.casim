@@ -5,16 +5,19 @@ use Standard
 init Start
 scheduling whileRunning
 
-universe CLIENT = { START, CreditRequestClient, DebitRequestClient }
+universe CLIENT = { CreditRequestClient, DebitRequestClient, DebitAcknowledgeClient }
 universe STATE = { SEND_CLIENT_MESSAGE, RECEIVE_CLIENT_MESSAGE, SCHEDULER_DONE }
-
-controlled nextClient: CLIENT -> CLIENT
-controlled currentClient: CLIENT
-controlled state: STATE
+universe TEST_STATE = { START, TEST_CREDIT, TEST_DEBIT }
+controlled nextClient: TEST_STATE -> LIST
+controlled currentTest: TEST_STATE
+controlled activeClients: Integer
 
 controlled initBy: CLIENT -> FUNCTION
 controlled withProg: CLIENT -> FUNCTION
 controlled andPol: CLIENT -> FUNCTION
+
+controlled nextTest: TEST_STATE -> TEST_STATE
+controlled activeList: CLIENT -> STRING
 
 // not yet clear how asim scheduling works
 policy whileRunning = {
@@ -24,12 +27,15 @@ policy whileRunning = {
 
 rule Start = {
 	program(self) := Program
-	nextClient(START) := CreditRequestClient
-	//nextClient(START) := DebitRequestClient
-	currentClient := START
-	state := SEND_CLIENT_MESSAGE
 	
-	//nextClient(CreditRequestClient) := DebitRequestClient
+	
+	currentTest := START
+	nextTest(START) := TEST_DEBIT
+	
+	activeClients := 0
+	
+	nextClient(TEST_CREDIT) := [ CreditRequestClient ]
+	nextClient(TEST_DEBIT)  := [ DebitAcknowledgeClient, DebitRequestClient ]
 	
 	//CreditRequestClient
 	initBy(CreditRequestClient) := InitCreditRequestClient
@@ -40,38 +46,44 @@ rule Start = {
 	initBy(DebitRequestClient) := InitDebitRequestClient
 	withProg(DebitRequestClient) := ProgramDebitRequestClient
 	andPol(DebitRequestClient) := SkipDebitRequestClient
+	
+	//DebitAcknowledgeClient
+	initBy(DebitAcknowledgeClient) := InitDebitAcknowledgeClient
+	withProg(DebitAcknowledgeClient) := ProgramDebitAcknowledgeClient
+	andPol(DebitAcknowledgeClient) := SkipDebitAcknowledgeClient
 }
 
 //-----------------------------------------------------------------------------------------------------------
 //				begin scheduler main programm
 //-----------------------------------------------------------------------------------------------------------
-rule Program = local clientName, temploc in seq
+rule Program = local clientName in seq
 	//wait a little before first client to spawn
-	if stepcount >= 15 and state = SEND_CLIENT_MESSAGE then seq
-		currentClient := nextClient(currentClient)
-		//Client rules are defined in clientTemplate script
-		if currentClient != undef then seq
-			createASIM currentClient 
-				initializedBy initBy(currentClient)
-				withProgram withProg(currentClient)
-				andPolicy andPol(currentClient)
-				in temploc
-				
-			state := RECEIVE_CLIENT_MESSAGE
-		endseq
-		else state := SCHEDULER_DONE
+	if stepcount >= 15 and activeClients = 0 then seq
+		currentTest := nextTest(currentTest)
 		
-		print "state:: " + toString(state)
+		//Client rules are defined in clientTemplate script
+		if currentTest != undef then seq			
+			forall createClient in nextClient(currentTest) do
+				createASIM createClient
+					initializedBy initBy(createClient)
+					withProgram withProg(createClient)
+					andPolicy andPol(createClient)
+					in activeList(createClient)
+					
+			activeClients := | nextClient(currentTest) |
+		endseq
+		else activeClients := -1
+		
+		print "activeClients:: " + toString(activeClients)
 	endseq
 	
-	if state = RECEIVE_CLIENT_MESSAGE then
+	if activeClients > 0 then
 		//look into inbox if a client has been sent its message and could be destroyed
 		choose m in inboxOf(self) with getMessageSubject(m)="Done" do seq
 			clientName := getMessageSender(m)
 			destroyASIM clientName
-			temploc := undef
 			print "--------------------------------------------------------------------------"
 			print "client removed: " + clientName
-			state := SEND_CLIENT_MESSAGE
+			activeClients := activeClients - 1
 		endseq
 endseq
