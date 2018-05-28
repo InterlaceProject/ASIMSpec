@@ -731,7 +731,6 @@ rule HandleDebitAckCompletion(transfer, client) = local otp, transaction in seq
 	do_log(client + " -> DebitAckCompletion received" + transfer, INFO)
 	//!important
 	//all internal checks and actions we need to use transaction
-	//all information sent to the client we need to use transfer
 	
 	otp := otpOf(transfer)
 	transaction := v(PendingTransactions, otp)
@@ -779,14 +778,20 @@ rule HandleDebitAckCompletion(transfer, client) = local otp, transaction in seq
 			else
 				do_log("Limit alert: " + limitAlert, WARN)
 			
+			//remove otp before sending to creditor/debitor
+			remove {"otp" -> otp} from transaction
+			
 			//asim bug: first message not sent
 			//send success message, attach limitAlert if necessary
-			Send(TransferPerformedSuccessfully(transfer, limitAlert), client) //client=debitor=buyer
-			Send(TransferPerformedSuccessfully(transfer, undef), //do not attach limit alerts to creditor
+			Send(TransferPerformedSuccessfully(transaction, limitAlert), client) //client=debitor=buyer
+			Send(TransferPerformedSuccessfully(transaction, undef), //do not attach limit alerts to creditor
 					activeClient(creditorOf(transaction))) //send to creditor
 			skip //dummy
 		endseq
 	endseq
+endseq
+
+rule CompleteTransaction(transaction, sender_client, operation) = seq
 endseq
 
 //-----------------------------------------------------------------------------------------------------------
