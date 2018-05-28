@@ -752,6 +752,11 @@ rule HandleDebitAckCompletion(transfer, client) = local otp, transaction in seq
 			//finally performing transfer by appending to the current ledger
 			Append(Transaction(transaction, client, "debit", now), Ledger)
 			
+			//update state
+			add { "state" -> "performed" } to transaction
+			//update transaction
+			add { otp -> transaction } to PendingTransactions
+
 			limitAlert := CheckAccountLimitsAlerts(
 				profileOf(ownerOf(fromA)),
 				accountOf(fromA))
