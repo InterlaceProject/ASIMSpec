@@ -15,6 +15,7 @@ policy NoPolicy = skip
 controlled client_state: STRING
 controlled DebitAckCompletion: STRING
 controlled ConfirmationReq: STRING
+controlled TransferPerformed: STRING
 
 controlled RECEIVE: STRING
 controlled TERMINATE: STRING
@@ -30,6 +31,7 @@ rule InitDebitAcknowledgeClient = seq
 	//"pseudo"-static definition used
 	ConfirmationReq := "ConfirmationReq"
 	DebitAckCompletion := "DebitAckCompletion"
+	TransferPerformed := "TransferPerformed"
 	
 	RECEIVE := "RECEIVE"
 	TERMINATE := "TERMINATE"
@@ -53,15 +55,28 @@ rule ProgramDebitAcknowledgeClient = local msgSubject, message, mbr in par
 			mbr := getMessageSender(m)
 			
 			//handle messages - only if they are from the server
-			if mbr = "server@server" and msgSubject = ConfirmationReq then seq
-				//send acknoledgement back for transfer
-				send message to mbr with subject DebitAckCompletion
-			endseq
+			if mbr = "server@server" then
+				if msgSubject = ConfirmationReq then seq
+					//send acknoledgement back for transfer
+					send message to mbr with subject DebitAckCompletion
+				endseq
+				else if msgSubject = TransferPerformed then seq
+					client_state := TERMINATE
+					print "DAC Transfer client_state:: " + client_state + "; message:: " + message
+				endseq
+				else seq
+					print msgSubject
+					print message
+					print mbr
+				endseq
+				endif
+			endif 
 		endseq
 	endpar
 	else
 	//send done message
 	if client_state = TERMINATE then par
+		print "TERMINTING..."
 		//"destroyASIM self" not working
 		//destroyASIM <name> would work but I don't know how to determine the name of the current ASIM
 		//=> send done message to scheduler which ends the asim by retrieving the sender name

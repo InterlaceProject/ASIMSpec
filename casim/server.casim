@@ -148,6 +148,13 @@ derived ConfirmationRequest(transfer) =
 	return message in
 		message := AssembleMessage(transfer, toString(ConfirmationReq))
 
+//message saying that otp is incorret or outdated
+derived IncorrectOtpFor(otp, amount, creditor) =
+	return message in
+		message := AssembleMessage(
+			"given otp: " + otp + " is exired or incorrect for amount " + amount + " to " + creditor, 
+			toString(DoNotProceedMessage))
+
 //put message together with subject
 derived AssembleMessage(msg, sub) =
 	return message in
@@ -299,6 +306,11 @@ derived amountOf(transfer) =
 derived debitorOf(transfer) =
 	return mbrId in
 		mbrId := v(transfer, "debitor")
+		
+//get creditor member id of a transfer
+derived creditorOf(transfer) =
+	return mbrId in
+		mbrId := v(transfer, "creditor")
 
 //determine otp
 derived otpOf(transfer) =
@@ -680,7 +692,7 @@ rule HandleDebitPerformReq(transfer, client) = seq
 				Send(TransferPerformedSuccessfully(transfer, limitAlert), activeClient(creditor)) //send to creditor
 				Send(TransferPerformedSuccessfully(transfer, limitAlert), activeClient(debitorOf(transfer))) //send to debitor
 			endseq
-			else local dummy in seq
+			else seq
 				do_log(client + " -> debit creating pending transaction", DEBUG)
 				
 				Insert(transfer, creditor, PendingTransactions)
@@ -720,10 +732,42 @@ rule HandleDebitAckCompletion(transfer, client) = local otp, transaction in seq
 	do_log("trans: " + transaction, DEBUG)
 	do_log("status: " + status(transaction), DEBUG)
 	
-	if (transaction = undef) or (status(transaction) != "pending") then
-		print "todo error"
-	else if not Expired(otp) then seq
-		print "todo transfer" 
+	if Expired(otp) or (transaction = undef) or (status(transaction) != "pending") then
+		Send(
+			IncorrectOtpFor(otp, amountOf(transfer), creditorOf(transfer)),
+			client) //client => where debitor is logged in
+	else local fromA, toA, bC in seq
+		//taking transaction from pending transactions
+		//instead of tansfer which was sent from client
+				
+		//debitor=buyer 
+		fromA := creditAccount(debitorOf(transaction))
+		//creditor=seller
+		toA := creditAccount(creditorOf(transaction))
+		
+		bC := AccountLimitsCheck(accountOf(fromA), accountOf(toA), amountOf(transfer))		
+		if bC != OK() then
+			Send(NotPermitted(transfer, "Balance check problem: " + bC), client)
+		else seq
+			//finally performing transfer by appending to the current ledger
+			Append(Transaction(transaction, client, "debit", now), Ledger)
+			
+			limitAlert := CheckAccountLimitsAlerts(
+				profileOf(ownerOf(fromA)),
+				accountOf(fromA))
+		
+			if (limitAlert = undef) then
+				do_log("No limit alert", DEBUG)
+			else
+				do_log("Limit alert: " + limitAlert, WARN)
+			
+			//asim bug: first message not sent
+			//send success message, attach limitAlert if necessary
+			Send(TransferPerformedSuccessfully(transfer, limitAlert), client) //client=debitor=buyer
+			Send(TransferPerformedSuccessfully(transfer, undef), //do not attach limit alerts to creditor
+					activeClient(creditorOf(transaction))) //send to creditor
+			skip //dummy
+		endseq
 	endseq
 endseq
 

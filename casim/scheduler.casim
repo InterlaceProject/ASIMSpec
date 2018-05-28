@@ -79,7 +79,7 @@ rule Program = local clientName in seq
 	
 	if activeClients > 0 then
 		//look into inbox if a client has been sent its message and could be destroyed
-		choose m in inboxOf(self) with getMessageSubject(m)="Done" do seq
+		forall m in inboxOf(self) with getMessageSubject(m)="Done" do seq
 			clientName := getMessageSender(m)
 			destroyASIM clientName
 			print "--------------------------------------------------------------------------"

@@ -94,8 +94,8 @@ rule ProgramDebitRequestClient = local msgSubject, message, mbr in par
 					client_state := TERMINATE
 				endseq
 				else if msgSubject = TransferPerformed then seq
-					print "Transfer status: " + message
 					client_state := TERMINATE
+					print "DRC Transfer client_state:: " + client_state + "; message:: " + message
 				endseq
 				else seq
 					print "unknown message: "+ message + ", stopped listenting."
