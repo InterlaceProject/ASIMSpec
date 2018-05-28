@@ -51,6 +51,12 @@ controlled sessionData: MAP
 controlled Ledger: MAP
 controlled PendingTransactions: MAP
 
+universe TRANSACTION_STATUS = {
+								TRANSACTION_PENDING,
+								TRANSACTION_PERFORMED,
+								TRANSACTION_REJECTED
+							}
+
 controlled lifetimeForOTPs: INTEGER
 
 //-----------------------------------------------------------------------------------------------------------
@@ -571,11 +577,9 @@ local limitAlert, bC, error in seq
 			else
 				do_log("Limit alert: " + limitAlert, WARN)
 		
-			
 			//send success message, attach limitAlert if necessary
-			Send(TransferPerformedSuccessfully(transfer, limitAlert), client)
-			
-			skip
+			Send(TransferPerformedSuccessfully(transfer, limitAlert), client)	
+			skip //dummy to get message sent
 		endseq
 		else seq
 			Send(NotPermitted(transfer, "Balance check problem: " + bC), client)
@@ -714,7 +718,7 @@ rule Insert(transfer, creditor, pendingTransactions) = local otp in seq
 	add { "otp" -> otp} to transfer
 	add { "creditor" -> creditor } to transfer
 	add { "created" -> now } to transfer
-	add { "state" -> "pending" } to transfer
+	add { "state" -> TRANSACTION_PENDING } to transfer
 	
 	//add the pending transfer to the pending transactions
 	add { otp -> transfer } to pendingTransactions
@@ -725,6 +729,10 @@ endseq
 //-----------------------------------------------------------------------------------------------------------
 rule HandleDebitAckCompletion(transfer, client) = local otp, transaction in seq
 	do_log(client + " -> DebitAckCompletion received" + transfer, INFO)
+	//!important
+	//all internal checks and actions we need to use transaction
+	//all information sent to the client we need to use transfer
+	
 	otp := otpOf(transfer)
 	transaction := v(PendingTransactions, otp)
 	
@@ -732,7 +740,7 @@ rule HandleDebitAckCompletion(transfer, client) = local otp, transaction in seq
 	do_log("trans: " + transaction, DEBUG)
 	do_log("status: " + status(transaction), DEBUG)
 	
-	if Expired(otp) or (transaction = undef) or (status(transaction) != "pending") then
+	if Expired(otp) or (transaction = undef) or (status(transaction) != TRANSACTION_PENDING) then
 		Send(
 			IncorrectOtpFor(otp, amountOf(transfer), creditorOf(transfer)),
 			client) //client => where debitor is logged in
@@ -744,16 +752,21 @@ rule HandleDebitAckCompletion(transfer, client) = local otp, transaction in seq
 		fromA := creditAccount(debitorOf(transaction))
 		//creditor=seller
 		toA := creditAccount(creditorOf(transaction))
-		
-		bC := AccountLimitsCheck(accountOf(fromA), accountOf(toA), amountOf(transfer))		
-		if bC != OK() then
+		bC := AccountLimitsCheck(accountOf(fromA), accountOf(toA), amountOf(transaction))
+				
+		if bC != OK() then seq
 			Send(NotPermitted(transfer, "Balance check problem: " + bC), client)
+			//update state
+			add { "state" -> TRANSACTION_REJECTED } to transaction
+			//update transaction
+			add { otp -> transaction } to PendingTransactions
+		endseq
 		else seq
 			//finally performing transfer by appending to the current ledger
 			Append(Transaction(transaction, client, "debit", now), Ledger)
 			
 			//update state
-			add { "state" -> "performed" } to transaction
+			add { "state" -> TRANSACTION_PERFORMED } to transaction
 			//update transaction
 			add { otp -> transaction } to PendingTransactions
 
