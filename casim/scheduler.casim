@@ -6,8 +6,7 @@ init Start
 scheduling whileRunning
 
 universe CLIENT = { CreditRequestClient, DebitRequestClient, DebitAcknowledgeClient }
-universe STATE = { SEND_CLIENT_MESSAGE, RECEIVE_CLIENT_MESSAGE, SCHEDULER_DONE }
-universe TEST_STATE = { START, TEST_CREDIT, TEST_DEBIT }
+universe TEST_STATE = { TEST_CREDIT, TEST_DEBIT }
 controlled nextClient: TEST_STATE -> LIST
 controlled currentTest: TEST_STATE
 controlled activeClients: Integer
@@ -30,7 +29,8 @@ rule Start = {
 	
 	
 	currentTest := START
-	nextTest(START) := TEST_DEBIT
+	nextTest(START) := TEST_CREDIT
+	nextTest(TEST_CREDIT) := TEST_DEBIT
 	
 	activeClients := 0
 	

@@ -1,24 +1,19 @@
 {
-   "id" : "interlace", 
-   "schedulers" : [
-       {
-		   "file" : "casim/scheduler.casim",
-	       "include" : [
-	       		"casim/clients/CreditRequestClient.casim",
-	       		"casim/clients/DebitRequestClient.casim",
-	       		"casim/clients/DebitAcknowledgeClient.casim"
-	       ],
-		   "start" : "true"
-       }
-   ], 
-   "asims" : [       
-       {
-           "file" : "casim/server.casim",
-           "include" : [
-	       		"casim/initdata.casim"
-	       ],
-           "start" : "true"
-       }
-       
-   ]
+  "id" : "interlace", 
+  "schedulers" : [{
+    "file" : "casim/scheduler.casim",
+    "include" : [
+      "casim/clients/CreditRequestClient.casim",
+      "casim/clients/DebitRequestClient.casim",
+      "casim/clients/DebitAcknowledgeClient.casim"
+    ],
+    "start" : "true"
+  }],
+  "asims" : [{
+    "file" : "casim/server.casim",
+    "include" : [
+      "casim/initdata.casim"
+    ],
+    "start" : "true"
+  }]
 }
