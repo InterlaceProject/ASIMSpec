@@ -791,9 +791,6 @@ rule HandleDebitAckCompletion(transfer, client) = local otp, transaction in seq
 	endseq
 endseq
 
-rule CompleteTransaction(transaction, sender_client, operation) = seq
-endseq
-
 //-----------------------------------------------------------------------------------------------------------
 //				begin main programm
 //-----------------------------------------------------------------------------------------------------------
