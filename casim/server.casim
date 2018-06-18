@@ -45,7 +45,7 @@ controlled profileTable: MEMBER_ID -> MAP
 controlled accountTable: ACCOUNT_ID -> MAP
 controlled userGroupTable: MEMBER_ID -> USER_TYPE_GROUP
 controlled TT: OPERATION * UNIT * USER_TYPE_GROUP -> SET
-controlled accountConnectivity: OPERATION * UNIT * ACCOUNT_TYPES -> SET
+controlled AccT: OPERATION * UNIT * ACCOUNT_TYPES -> SET
 controlled sessionData: MAP
 
 controlled Ledger: MAP
@@ -106,7 +106,7 @@ rule Start = {
 	//initalize logger
 	initCustomLogger(DEBUG)
 	
-	program(self) := Program
+	program(self) := DispatchMessages
 }
 
 //-----------------------------------------------------------------------------------------------------------
@@ -493,7 +493,7 @@ local errormessage, tt, ac in seq
 		else if (toGrpId memberof tt) then seq //TT check
 			do_log("group in TT", DEBUG)
 			
-			ac := accountConnectivity(operation, unitOf(fromA), accountType(fromA)) 
+			ac := AccT(operation, unitOf(fromA), accountType(fromA)) 
 			do_log("AC -> " + ac, DEBUG)
 			
 			if (ac = undef) then
@@ -794,7 +794,7 @@ endseq
 //-----------------------------------------------------------------------------------------------------------
 //				begin main programm
 //-----------------------------------------------------------------------------------------------------------
-rule Program = {
+rule DispatchMessages = {
 	forall m in inboxOf(self) do seq
 		//fetch message information
 		msubject := getMessageSubject(m)
@@ -804,12 +804,13 @@ rule Program = {
 		do_log("message received from " + member + " with subject " + msubject , DEBUG)
 		
 		//dispatch messages
-    	if msgIn != undef and member != undef then seq
-    		if msubject = toString(CreditReviewReq) then HandleCreditPreviewReq(msgIn, member)
-    		if msubject = toString(CreditPerformReq) then HandleCreditPerformReq(msgIn, member)
-    		if msubject = toString(DebitPreviewReq) then HandleDebitPreviewReq(msgIn, member)
-    		if msubject = toString(DebitPerformReq) then HandleDebitPerformReq(msgIn, member)
-    		if msubject = toString(DebitAckCompletion) then HandleDebitAckCompletion(msgIn, member)
-		endseq
+    	if msgIn != undef and member != undef then
+		case msubject of
+			toString(CreditReviewReq): HandleCreditPreviewReq(msgIn, member)
+			toString(CreditPerformReq): HandleCreditPerformReq(msgIn, member)
+			toString(DebitPreviewReq): HandleDebitPreviewReq(msgIn, member)
+			toString(DebitPerformReq): HandleDebitPerformReq(msgIn, member)
+			toString(DebitAckCompletion): HandleDebitAckCompletion(msgIn, member)
+		endcase
     endseq
 }
