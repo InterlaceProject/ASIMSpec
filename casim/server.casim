@@ -38,8 +38,8 @@ universe MESSAGE_REQUESTS = {
 								ConfirmationReq
 							}
 
-universe ACCOUNT_ID = {accId1, accId2, accId3}
-universe MEMBER_ID = {mbrId1, mbrId2, mbrId3}
+universe ACCOUNT_ID = {accId1, accId2, accId3, accId4, accId5, accId6, accId7}
+universe MEMBER_ID = {mbrId1, mbrId2, mbrId3, mbrId4}
 
 controlled profileTable: MEMBER_ID -> MAP
 controlled accountTable: ACCOUNT_ID -> MAP
