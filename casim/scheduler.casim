@@ -6,7 +6,7 @@ init Start
 scheduling whileRunning
 
 universe CLIENT = { CreditRequestClient, DebitRequestClient, DebitAcknowledgeClient }
-universe TEST_STATE = { TEST_CREDIT, TEST_DEBIT }
+universe TEST_STATE = { START, TEST_CREDIT, TEST_DEBIT }
 controlled nextClient: TEST_STATE -> LIST
 controlled currentTest: TEST_STATE
 controlled activeClients: Integer
@@ -72,7 +72,7 @@ rule Program = local clientName in seq
 					
 			activeClients := | nextClient(currentTest) |
 		endseq
-		else activeClients := -1
+		else activeClients := - 1
 		
 		print "activeClients:: " + toString(activeClients)
 	endseq

@@ -364,10 +364,10 @@ derived groupOf(mbrId) =
 		group := userGroupTable(mbrId)
 
 //get member id by using session information
-derived activeLogin(client) =
+derived activeLogin(client_address) =
 	return mbrId in
 		forall session in sessionData do
-			if toString(client) = nth(session, 1) then
+			if toString(client_address) = nth(session, 1) then
 				mbrId := nth(session, 2)
 			
 //get client id by using session information

@@ -67,7 +67,7 @@ rule ProgramCreditRequestClient = local msgSubject, message, mbr in par
 	if (CreditReviewReq memberof messageNext) = true and client_state = SEND then par
 		messageNext := { DoNotProceedMessage, ProceedMessage}
 		client_state := RECEIVE
-		send CREDITREQUEST  to "server" with subject CreditReviewReq		
+		send CREDITREQUEST  to "server" with subject CreditReviewReq
 	endpar
 	else
 	// check for proceedmessage message
