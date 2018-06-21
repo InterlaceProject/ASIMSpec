@@ -238,7 +238,7 @@ derived UnitsMismatch(fromA, toA) =
 //read value of a map (amap) identified by a key
 derived v(amap, key) =
 	return ret in
-		if amap = undef then
+		if amap = undef or key = undef then
 			ret := undef
 		else
 			choose v in amap with key = nth(v, 1) do ret := nth(v, 2)
