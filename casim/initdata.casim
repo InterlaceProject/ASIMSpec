@@ -1,4 +1,4 @@
-	/*includeskip begin*/
+/*includeskip begin*/
 CoreASIM initaccounts
 use Standard
 init dummy
@@ -11,8 +11,7 @@ controlled profileTable: MEMBER_ID -> MAP
 controlled accountTable: ACCOUNT_ID -> MAP
 controlled userGroupTable: MEMBER_ID -> USER_TYPE_GROUP
 controlled TT: OPERATION * UNIT * USER_TYPE_GROUP -> SET
-controlled accountConnectivity: OPERATION * UNIT * ACCOUNT_TYPES -> SET
-//controlled sessionData: STRING -> STRING
+controlled AccT: OPERATION * UNIT * ACCOUNT_TYPES -> SET
 controlled sessionData: MAP
 /*includeskip end*/
 
@@ -152,11 +151,11 @@ rule InitData = {
 	
 	//account connectivity (Test 2, D3.1)
 	//only for user-initiated request, does not include system-initiated requests
-	accountConnectivity("credit", "SRD", "CC") := {"CC", "DOMU", "MIRROR"}
-	accountConnectivity("credit", "SRD", "DOMU") := {"CC"}
-	accountConnectivity("credit", "SRD", "MIRROR") := {"CC"}
+	AccT("credit", "SRD", "CC") := {"CC", "DOMU", "MIRROR"}
+	AccT("credit", "SRD", "DOMU") := {"CC"}
+	AccT("credit", "SRD", "MIRROR") := {"CC"}
 	
-	accountConnectivity("debit", "SRD", "CC") := {"CC"}
+	AccT("debit", "SRD", "CC") := {"CC"}
 	
-	accountConnectivity("debit", "EUR", "Income") := {"Bisoo"}
+	AccT("debit", "EUR", "Income") := {"Bisoo"}
 }
