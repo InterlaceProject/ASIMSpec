@@ -120,10 +120,15 @@ derived messageContent(msg) =
 derived messageSubject(msg) =
 	return ms in
 		ms := nth(msg, 2)
+		
+//put message together with subject
+derived AssembleMessage(msg, sub) =
+	return message in
+		message := [msg, sub]
 
 // send message to receipient mbr
-rule Send(msg, mbr) = {
-	send messageContent(msg) to mbr with subject messageSubject(msg)
+rule Send(msg, agent) = {
+	send messageContent(msg) to agent with subject messageSubject(msg)
 }
 
 //-----------------------------------------------------------------------------------------------------------
@@ -160,11 +165,6 @@ derived IncorrectOtpFor(otp, amount, creditor) =
 		message := AssembleMessage(
 			"given otp: " + otp + " is exired or incorrect for amount " + amount + " to " + creditor, 
 			toString(DoNotProceedMessage))
-
-//put message together with subject
-derived AssembleMessage(msg, sub) =
-	return message in
-		message := [msg, sub]
 
 //"not account owner" - message 
 derived NotAccountOwner(mbr, accId) =
