@@ -16,7 +16,7 @@ controlled messageNext: SET
 controlled client_state: STRING
 controlled CREDITREQUEST: MAP
 
-controlled CreditReviewReq: STRING
+controlled CreditPreviewReq: STRING
 controlled DoNotProceedMessage: STRING
 controlled ProceedMessage: STRING
 controlled TransferPerformed: STRING
@@ -35,7 +35,7 @@ rule InitCreditRequestClient = seq
 	//cannot be done facilitating universe definition
 	//see !!important!! comment on top. thus here are
 	//"pseudo"-static definition used
-	CreditReviewReq := "CreditReviewReq"
+	CreditPreviewReq := "CreditPreviewReq"
 	CreditPerformReq := "CreditPerformReq"
 	ProceedMessage := "ProceedMessage"
 	DoNotProceedMessage := "DoNotProceedMessage"
@@ -47,7 +47,7 @@ rule InitCreditRequestClient = seq
 	DONE := "DONE"
 	
 	//init variables
-	messageNext := { CreditReviewReq }
+	messageNext := { CreditPreviewReq }
 	client_state := SEND
 	CREDITREQUEST := {
 					"from" -> "accId1",
@@ -61,13 +61,13 @@ rule InitCreditRequestClient = seq
 endseq
 
 rule ProgramCreditRequestClient = local msgSubject, message, mbr in par
-	//print "client_state:: " + client_state + "; messageNext:: " + messageNext + "; CreditReviewReq:: " + CreditReviewReq
+	//print "client_state:: " + client_state + "; messageNext:: " + messageNext + "; CreditPreviewReq:: " + CreditPreviewReq
 	
 	//send initial request
-	if (CreditReviewReq memberof messageNext) = true and client_state = SEND then par
+	if (CreditPreviewReq memberof messageNext) = true and client_state = SEND then par
 		messageNext := { DoNotProceedMessage, ProceedMessage}
 		client_state := RECEIVE
-		send CREDITREQUEST  to "server" with subject CreditReviewReq
+		send CREDITREQUEST  to "server" with subject CreditPreviewReq
 	endpar
 	else
 	// check for proceedmessage message

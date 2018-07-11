@@ -27,7 +27,7 @@ universe USER_TYPE_GROUP = {
 universe CHANNEL = { Service, POS }
 
 universe MESSAGE_REQUESTS = {
-								CreditReviewReq,
+								CreditPreviewReq,
 								CreditPerformReq,
 								DebitPreviewReq,
 								DebitPerformReq,
@@ -806,7 +806,7 @@ rule DispatchMessages = {
 		//dispatch messages
     	if msgIn != undef and member != undef then
 		case msubject of
-			toString(CreditReviewReq): HandleCreditPreviewReq(msgIn, member)
+			toString(CreditPreviewReq): HandleCreditPreviewReq(msgIn, member)
 			toString(CreditPerformReq): HandleCreditPerformReq(msgIn, member)
 			toString(DebitPreviewReq): HandleDebitPreviewReq(msgIn, member)
 			toString(DebitPerformReq): HandleDebitPerformReq(msgIn, member)
