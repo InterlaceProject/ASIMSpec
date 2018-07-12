@@ -435,10 +435,10 @@ derived Transaction(transfer, mbr, operation, date) =
 		}		
 
 //append transaction
-rule Append(trans, ledger) = 
+rule Append(transfer, ledger) = 
 local transactionId in seq
 	transactionId := NewTransactionID(16)
-	add { transactionId -> trans } to ledger
+	add { transactionId -> transfer } to ledger
 	
 	do_log(ledger, DEBUG)
 endseq
@@ -448,7 +448,7 @@ derived Small(amount) =
 	return small in
 		small := (amount < 100)
 
-//test if an one time pad has been expired		
+//test if an one time password has been expired		
 derived Expired(otp) = 
 	return expired in
 		expired := ((now - birthtime(otp)) > lifetimeForOTPs) //TODO
@@ -474,7 +474,11 @@ derived CheckAccountLimitsAlerts(profile, account) =
 			
 // check for a credit request
 // might be party separated for the debit check (similar requirements?)
-// Credit/DebitTypeCheck
+// consolidated FinalDebitAccountLimitsCheck, DebitAccountLimitsCheck, CreditAccountLimitsCheck:
+//    changed in comparison to requirement specs:
+//        * removed send actions and callback function calls
+//        * added messages for check results
+//        * actions are later performed based on msg-results and transaction type
 rule PreviewCheck(mbr, fromA, toA, fromGrpId, toGrpId, operation) =
 local errormessage, tt, ac in seq
 	errormessage := undef //TODO create message from derived function
@@ -512,7 +516,6 @@ endseq
 //-----------------------------------------------------------------------------------------------------------
 //				begin CreditPreviewReq
 //-----------------------------------------------------------------------------------------------------------
-
 rule HandleCreditPreviewReq(transfer, client) = 
 	local error in seq
 	do_log(client + " -> CreditPreviewReq received: " + transfer, INFO)
