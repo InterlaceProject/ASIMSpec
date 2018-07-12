@@ -19,8 +19,8 @@ controlled DEBITREQUEST: MAP
 controlled DebitPreviewReq: STRING
 controlled DebitPerformReq: STRING
 controlled DebitAckExec: STRING
-controlled DoNotProceedMessage: STRING
-controlled ProceedMessage: STRING
+controlled DoNotProceed: STRING
+controlled Proceed: STRING
 controlled TransferPerformed: STRING
 
 controlled RECEIVE: STRING
@@ -39,8 +39,8 @@ rule InitDebitRequestClient = seq
 	DebitPreviewReq := "DebitPreviewReq"
 	DebitPerformReq := "DebitPerformReq"
 	DebitAckExec := "DebitAckExec" //TODO: handle with second "debit" client
-	ProceedMessage := "ProceedMessage"
-	DoNotProceedMessage := "DoNotProceedMessage"
+	Proceed := "Proceed"
+	DoNotProceed := "DoNotProceed"
 	TransferPerformed := "TransferPerformed"
 	
 	RECEIVE := "RECEIVE"
@@ -67,12 +67,12 @@ rule ProgramDebitRequestClient = local msgSubject, message, mbr in par
 	
 	//send initial request
 	if (DebitPreviewReq memberof messageNext) = true and client_state = SEND then par
-		messageNext := { DoNotProceedMessage, ProceedMessage}
+		messageNext := { DoNotProceed, Proceed}
 		client_state := RECEIVE
 		send DEBITREQUEST  to "server" with subject DebitPreviewReq		
 	endpar
 	else
-	// check for proceedmessage message
+	// check for Proceed message
 	if client_state = RECEIVE then par
 		forall m in inboxOf(self) do seq
 			//fetch message data
@@ -84,12 +84,12 @@ rule ProgramDebitRequestClient = local msgSubject, message, mbr in par
 			
 			//handle messages - only if they are from the server
 			if (mbr = "server@server") then seq
-				if msgSubject = ProceedMessage then seq
+				if msgSubject = Proceed then seq
 					print "sending message DebitPerformReq to server"
 					send DEBITREQUEST  to "server" with subject DebitPerformReq
-					messageNext := { TransferPerformed, DoNotProceedMessage }					
+					messageNext := { TransferPerformed, DoNotProceed }					
 				endseq
-				else if msgSubject = DoNotProceedMessage then seq
+				else if msgSubject = DoNotProceed then seq
 					print "cannot proceed with request: " + message
 					client_state := TERMINATE
 				endseq

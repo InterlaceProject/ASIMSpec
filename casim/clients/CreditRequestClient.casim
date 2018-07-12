@@ -17,8 +17,8 @@ controlled client_state: STRING
 controlled CREDITREQUEST: MAP
 
 controlled CreditPreviewReq: STRING
-controlled DoNotProceedMessage: STRING
-controlled ProceedMessage: STRING
+controlled DoNotProceed: STRING
+controlled Proceed: STRING
 controlled TransferPerformed: STRING
 controlled CreditPerformReq: STRING
 
@@ -37,8 +37,8 @@ rule InitCreditRequestClient = seq
 	//"pseudo"-static definition used
 	CreditPreviewReq := "CreditPreviewReq"
 	CreditPerformReq := "CreditPerformReq"
-	ProceedMessage := "ProceedMessage"
-	DoNotProceedMessage := "DoNotProceedMessage"
+	Proceed := "Proceed"
+	DoNotProceed := "DoNotProceed"
 	TransferPerformed := "TransferPerformed"
 	
 	RECEIVE := "RECEIVE"
@@ -65,12 +65,12 @@ rule ProgramCreditRequestClient = local msgSubject, message, mbr in par
 	
 	//send initial request
 	if (CreditPreviewReq memberof messageNext) = true and client_state = SEND then par
-		messageNext := { DoNotProceedMessage, ProceedMessage}
+		messageNext := { DoNotProceed, Proceed}
 		client_state := RECEIVE
 		send CREDITREQUEST  to "server" with subject CreditPreviewReq
 	endpar
 	else
-	// check for proceedmessage message
+	// check for Proceed message
 	if client_state = RECEIVE then par
 		forall m in inboxOf(self) do seq
 			//fetch message data
@@ -82,12 +82,12 @@ rule ProgramCreditRequestClient = local msgSubject, message, mbr in par
 			
 			//handle message - only if they are from a specific location 
 			if (mbr = "server@server") then seq
-				if msgSubject = ProceedMessage then seq
+				if msgSubject = Proceed then seq
 					print "sending message CreditPerformReq to server"
 					send CREDITREQUEST  to "server" with subject CreditPerformReq
-					messageNext := { TransferPerformed, DoNotProceedMessage }					
+					messageNext := { TransferPerformed, DoNotProceed }					
 				endseq
-				else if msgSubject = DoNotProceedMessage then seq
+				else if msgSubject = DoNotProceed then seq
 					print "cannot proceed with request: " + message
 					client_state := TERMINATE
 				endseq

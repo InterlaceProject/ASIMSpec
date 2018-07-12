@@ -32,8 +32,8 @@ universe MESSAGE_REQUESTS = {
 								DebitPreviewReq,
 								DebitPerformReq,
 								DebitAckCompletion,
-								ProceedMessage,
-								DoNotProceedMessage,
+								Proceed,
+								DoNotProceed,
 								TransferPerformed,
 								ConfirmationReq
 							}
@@ -138,12 +138,12 @@ rule Send(msg, agent) = {
 // not permitted message
 derived NotPermitted(transfer, error) =
 	return message in
-		message := AssembleMessage(error + " for transfer: " + transfer, toString(DoNotProceedMessage))
+		message := AssembleMessage(error + " for transfer: " + transfer, toString(DoNotProceed))
 
 //prepare normal message
 derived YouMayProceedWith(transfer) =
 	return message in
-		message := AssembleMessage(transfer, toString(ProceedMessage))
+		message := AssembleMessage(transfer, toString(Proceed))
 
 //success message with optional limitAlert
 derived TransferPerformedSuccessfully(transfer, limitAlert) =
@@ -164,7 +164,7 @@ derived IncorrectOtpFor(otp, amount, creditor) =
 	return message in
 		message := AssembleMessage(
 			"given otp: " + otp + " is exired or incorrect for amount " + amount + " to " + creditor, 
-			toString(DoNotProceedMessage))
+			toString(DoNotProceed))
 
 //"not account owner" - message 
 derived NotAccountOwner(mbr, accId) =
